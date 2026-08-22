@@ -4,12 +4,14 @@ import { getActiveBrand } from "@/lib/brand";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/currency";
 import { formatDisplayDate, STATUS_CLASSES, STATUS_LABELS } from "@/lib/format";
+import { markOverdueInvoices } from "@/lib/invoices";
 import { getDashboardStats } from "@/lib/stats";
 
 export const metadata = { title: "Dashboard | Invoice Studio" };
 
 export default async function DashboardPage() {
   const user = await requireUser("/dashboard");
+  await markOverdueInvoices(user.id);
   const activeBrand = await getActiveBrand(user.id);
   const currency = activeBrand?.settings?.currency ?? "INR";
 

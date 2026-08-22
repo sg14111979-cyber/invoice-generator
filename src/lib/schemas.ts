@@ -30,6 +30,29 @@ export const profileSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
 });
 
+export const userSettingsSchema = z.object({
+  defaultCurrency: currencyEnum.default("INR"),
+  defaultPaymentTerms: optionalText(80),
+  defaultNotes: optionalText(2000),
+  defaultFooter: optionalText(500),
+  paperSize: z.enum(["A4", "Letter"]).default("A4"),
+  logoPosition: z.enum(["left", "right"]).default("left"),
+  fontSize: z.enum(["compact", "normal", "large"]).default("normal"),
+  defaultTemplate: z.enum(["modern", "corporate", "classic"]).default("modern"),
+});
+
+export const adminUserSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().toLowerCase().email(),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+  role: z.enum(["ADMIN", "USER"]).default("USER"),
+});
+
+export const adminUserUpdateSchema = z.object({
+  role: z.enum(["ADMIN", "USER"]).optional(),
+  password: z.union([z.string().min(8).max(200), z.literal("")]).optional(),
+});
+
 export const brandSchema = z.object({
   name: z.string().trim().min(1, "Brand name is required").max(160),
   addressLine1: optionalText(200),
