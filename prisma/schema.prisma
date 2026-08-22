@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         String    @default("USER")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions     Session[]
+  brands       Brand[]
+  customers    Customer[]
+  invoices     Invoice[]
+  settings     UserSettings?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserSettings {
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  defaultCurrency     String  @default("INR")
+  defaultPaymentTerms String  @default("Net 15")
+  defaultNotes        String  @default("")
+  defaultFooter       String  @default("Thank you for your business.")
+  paperSize           String  @default("A4")
+  logoPosition        String  @default("left")
+  fontSize            String  @default("normal")
+  defaultTemplate     String  @default("modern")
+
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Brand {
+  id                  String     @id @default(cuid())
+  userId              String
+  name                String
+  logoPath            String?
+  addressLine1        String     @default("")
+  addressLine2        String     @default("")
+  city                String     @default("")
+  state               String     @default("")
+  postalCode          String     @default("")
+  country             String     @default("")
+  phone               String     @default("")
+  email               String     @default("")
+  website             String     @default("")
+  taxNumber           String     @default("")
+  registrationNumber  String     @default("")
+  isDefault           Boolean    @default(false)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settings            BrandSettings?
+  invoices            Invoice[]
+
+  @@index([userId])
+}
+
+model BrandSettings {
+  id                  String  @id @default(cuid())
+  brandId             String  @unique
+  invoicePrefix       String  @default("INV")
+  numberFormat        String  @default("{PREFIX}-{NUMBER}")
+  nextNumber          Int     @default(1)
+  numberPadding       Int     @default(5)
+  currency            String  @default("INR")
+  taxMode             String  @default("SINGLE")
+  defaultTaxRate      Float   @default(0)
+  gstEnabled          Boolean @default(false)
+  cgstRate            Float   @default(0)
+  sgstRate            Float   @default(0)
+  igstRate            Float   @default(0)
+  paymentTerms        String  @default("Net 15")
+  defaultNotes        String  @default("")
+  defaultTerms        String  @default("")
+  defaultFooter       String  @default("Thank you for your business.")
+  template            String  @default("modern")
+  bankName            String  @default("")
+  accountName         String  @default("")
+  accountNumber       String  @default("")
+  ifsc                String  @default("")
+  swift               String  @default("")
+  upiId               String  @default("")
+  paymentLink         String  @default("")
+  paymentInstructions String  @default("")
+
+  brand               Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id           String    @id @default(cuid())
+  userId       String
+  name         String
+  companyName  String    @default("")
+  addressLine1 String    @default("")
+  addressLine2 String    @default("")
+  city         String    @default("")
+  state        String    @default("")
+  country      String    @default("")
+  postalCode   String    @default("")
+  email        String    @default("")
+  phone        String    @default("")
+  taxNumber    String    @default("")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices     Invoice[]
+
+  @@index([userId])
+}
+
+model Invoice {
+  id                  String        @id @default(cuid())
+  userId              String
+  brandId             String
+  customerId          String?
+
+  invoiceNumber       String
+  status              String        @default("DRAFT")
+  template            String        @default("modern")
+  currency            String        @default("INR")
+  issueDate           DateTime      @default(now())
+  dueDate             DateTime?
+  paymentTerms        String        @default("")
+  poNumber            String        @default("")
+
+  // Snapshot of brand ("from") details so later brand edits do not rewrite history.
+  fromName            String        @default("")
+  fromAddress         String        @default("")
+  fromPhone           String        @default("")
+  fromEmail           String        @default("")
+  fromWebsite         String        @default("")
+  fromTaxNumber       String        @default("")
+  fromRegistration    String        @default("")
+  fromLogoPath        String?
+
+  // Snapshot of customer ("bill to") details.
+  toName              String        @default("")
+  toCompany           String        @default("")
+  toAddress           String        @default("")
+  toEmail             String        @default("")
+  toPhone             String        @default("")
+  toTaxNumber         String        @default("")
+
+  taxMode             String        @default("SINGLE")
+  taxRate             Float         @default(0)
+  cgstRate            Float         @default(0)
+  sgstRate            Float         @default(0)
+  igstRate            Float         @default(0)
+
+  discountType        String        @default("PERCENT")
+  discountValue       Float         @default(0)
+
+  shippingAmount      Float         @default(0)
+  shippingDescription String        @default("")
+
+  amountPaid          Float         @default(0)
+
+  notes               String        @default("")
+  terms               String        @default("")
+  footer              String        @default("")
+
+  bankName            String        @default("")
+  accountName         String        @default("")
+  accountNumber       String        @default("")
+  ifsc                String        @default("")
+  swift               String        @default("")
+  upiId               String        @default("")
+  paymentLink         String        @default("")
+  paymentInstructions String        @default("")
+
+  subtotal            Float         @default(0)
+  discountAmount      Float         @default(0)
+  taxableAmount       Float         @default(0)
+  taxAmount           Float         @default(0)
+  total               Float         @default(0)
+  balanceDue          Float         @default(0)
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand               Brand         @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  customer            Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items               InvoiceItem[]
+  payments            Payment[]
+
+  @@unique([userId, invoiceNumber])
+  @@index([userId])
+  @@index([brandId])
+  @@index([customerId])
+}
+
+model InvoiceItem {
+  id           String  @id @default(cuid())
+  invoiceId    String
+  position     Int     @default(0)
+  description  String  @default("")
+  quantity     Float   @default(1)
+  unit         String  @default("")
+  rate         Float   @default(0)
+  taxRate      Float   @default(0)
+  discountRate Float   @default(0)
+  amount       Float   @default(0)
+
+  invoice      Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  invoiceId String
+  amount    Float
+  paidAt    DateTime @default(now())
+  method    String   @default("")
+  reference String   @default("")
+  note      String   @default("")
+
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
