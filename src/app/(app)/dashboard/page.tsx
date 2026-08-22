@@ -73,6 +73,20 @@ export default async function DashboardPage() {
         </div>
       ) : null}
 
+      {stats.total === 0 ? (
+        <div className="card p-5">
+          <h2 className="text-sm font-semibold text-slate-900">New here? Three steps to your first invoice</h2>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
+            <li>Add your business details once under Brands - they appear on every invoice.</li>
+            <li>Save the customer you are billing under Customers.</li>
+            <li>Click New invoice, add your items, then download the PDF.</li>
+          </ol>
+          <Link className="btn-secondary mt-3 inline-flex" href="/help">
+            Read the how-to guide
+          </Link>
+        </div>
+      ) : null}
+
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {countCards.map((card) => (
           <div key={card.label} className="card p-4">
@@ -122,6 +136,9 @@ export default async function DashboardPage() {
           </Link>
           <Link className="btn-secondary" href="/settings">
             Settings
+          </Link>
+          <Link className="btn-secondary" href="/help">
+            How to use
           </Link>
         </div>
       </section>

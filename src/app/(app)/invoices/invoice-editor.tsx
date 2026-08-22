@@ -486,6 +486,7 @@ export function InvoiceEditor({ brands, customers, initialDraft, invoiceId }: Pr
             value={draft.discountValue}
             onChange={(value) => set("discountValue", value)}
             step={0.01}
+            max={draft.discountType === "PERCENT" ? 100 : undefined}
           />
           <NumberField
             label="Shipping"

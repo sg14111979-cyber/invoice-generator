@@ -8,6 +8,7 @@ import {
   BrandIcon,
   CloseIcon,
   DashboardIcon,
+  HelpIcon,
   InvoiceIcon,
   MenuIcon,
   SettingsIcon,
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { href: "/customers", label: "Customers", Icon: UsersIcon },
   { href: "/brands", label: "Brands", Icon: BrandIcon },
   { href: "/settings", label: "Settings", Icon: SettingsIcon },
+  { href: "/help", label: "How to use", Icon: HelpIcon },
 ];
 
 export function AppShell({ user, brands, activeBrandId, children }: AppShellProps) {
@@ -170,7 +172,7 @@ export function AppShell({ user, brands, activeBrandId, children }: AppShellProp
 
         <main className="flex-1 px-4 py-6 lg:px-8">{children}</main>
 
-        <nav className="no-print sticky bottom-0 z-30 grid grid-cols-5 border-t border-slate-200 bg-white sm:hidden">
+        <nav className="no-print sticky bottom-0 z-30 grid grid-cols-6 border-t border-slate-200 bg-white sm:hidden">
           {NAV_ITEMS.map(({ href, label, Icon }) => (
             <Link
               key={href}

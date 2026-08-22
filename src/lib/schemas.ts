@@ -25,6 +25,17 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8, "New password must be at least 8 characters").max(200),
 });
 
+export const setupSchema = z.object({
+  name: z.string().trim().min(2, "Enter your name").max(120),
+  businessName: z.string().trim().min(2, "Enter your business name").max(160),
+  email: z.string().trim().toLowerCase().email("Enter a valid email"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(200, "Password is too long"),
+  currency: currencyEnum.default("INR"),
+});
+
 export const profileSchema = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.string().trim().toLowerCase().email(),

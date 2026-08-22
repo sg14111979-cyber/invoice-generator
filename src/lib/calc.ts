@@ -55,6 +55,10 @@ export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function num(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -74,10 +78,12 @@ export function calculateInvoice(input: CalcInput): CalcResult {
 
   const subtotal = round2(lines.reduce((sum, line) => sum + line.net, 0));
 
-  const invoiceDiscount =
+  // A discount never exceeds the subtotal, so totals can't go negative.
+  const rawDiscount =
     discountType === "PERCENT"
-      ? round2((subtotal * num(input.discountValue)) / 100)
-      : round2(Math.min(num(input.discountValue), subtotal));
+      ? (subtotal * clamp(num(input.discountValue), 0, 100)) / 100
+      : num(input.discountValue);
+  const invoiceDiscount = round2(clamp(rawDiscount, 0, subtotal));
 
   // Spread the invoice-level discount across lines so per-line tax stays correct.
   const discountFactor = subtotal > 0 ? (subtotal - invoiceDiscount) / subtotal : 0;

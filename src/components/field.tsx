@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 interface TextFieldProps {
   label: string;
   value: string;
@@ -64,20 +66,59 @@ export function NumberField({
         {label}
         {suffix ? <span className="ml-1 normal-case text-slate-400">{suffix}</span> : null}
       </span>
-      <input
-        className="input"
-        type="number"
-        inputMode="decimal"
-        value={Number.isFinite(value) ? value : 0}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(event) => {
-          const parsed = Number(event.target.value);
-          onChange(Number.isFinite(parsed) ? parsed : 0);
-        }}
-      />
+      <NumberInput value={value} onChange={onChange} min={min} max={max} step={step} />
     </label>
+  );
+}
+
+/**
+ * Number input that keeps what the user typed while editing, so clearing the box
+ * doesn't leave a stray "0" in front of the next digits.
+ */
+function NumberInput({
+  value,
+  onChange,
+  min,
+  max,
+  step,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step: number;
+}) {
+  const [text, setText] = useState(String(Number.isFinite(value) ? value : 0));
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (!editing) setText(String(Number.isFinite(value) ? value : 0));
+  }, [value, editing]);
+
+  return (
+    <input
+      className="input"
+      type="number"
+      inputMode="decimal"
+      value={text}
+      min={min}
+      max={max}
+      step={step}
+      onFocus={(event) => {
+        setEditing(true);
+        event.currentTarget.select();
+      }}
+      onChange={(event) => {
+        const next = event.target.value;
+        setText(next);
+        const parsed = Number(next);
+        onChange(next.trim() === "" || !Number.isFinite(parsed) ? 0 : parsed);
+      }}
+      onBlur={() => {
+        setEditing(false);
+        setText(String(Number.isFinite(value) ? value : 0));
+      }}
+    />
   );
 }
 

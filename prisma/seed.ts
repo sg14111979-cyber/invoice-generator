@@ -13,9 +13,11 @@ async function main() {
   const name = process.env.ADMIN_NAME ?? "Administrator";
 
   if (!email || !password) {
-    throw new Error(
-      "ADMIN_EMAIL and ADMIN_PASSWORD must be set to seed the administrator account.",
+    // No credentials configured: the in-app first-run wizard creates the owner instead.
+    console.log(
+      "ADMIN_EMAIL/ADMIN_PASSWORD not set - skipping seed; the app will ask for these on first visit.",
     );
+    return;
   }
   if (password.length < 8) {
     throw new Error("ADMIN_PASSWORD must be at least 8 characters.");

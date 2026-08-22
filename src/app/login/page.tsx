@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Sign in | Invoice Studio" };
@@ -12,6 +13,10 @@ export default async function LoginPage({
 }) {
   const user = await getCurrentUser();
   if (user) redirect("/dashboard");
+
+  // A brand-new install has no accounts yet: send the first visitor to the wizard.
+  const userCount = await prisma.user.count();
+  if (userCount === 0) redirect("/setup");
 
   const params = await searchParams;
 
