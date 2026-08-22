@@ -13,21 +13,32 @@ created, viewed or downloaded.
 
 ## Getting started
 
+Requires Node.js 20+.
+
 ```bash
-npm install
-cp .env.example .env      # then edit the values
-npm run db:migrate        # create the database
-npm run db:seed           # create the administrator + sample brand
+npm run setup   # asks for your admin email/password, then installs, migrates and seeds
 npm run dev
 ```
 
-The app runs at http://localhost:3000 and redirects to `/login`.
+The app runs at http://localhost:3000 and redirects to `/login`. Sign in with the
+admin email and password you entered during setup.
+
+`npm run setup` writes a git-ignored `.env` with a random `SESSION_SECRET`; if `.env`
+already exists it is left untouched. To do it manually instead:
+
+```bash
+cp .env.example .env      # then edit the values
+npm install
+npm run db:migrate
+npm run db:seed
+```
 
 ## Environment variables
 
 | Variable         | Purpose                                              |
 | ---------------- | ---------------------------------------------------- |
 | `DATABASE_URL`   | Prisma connection string (default: local SQLite file) |
+| `SESSION_SECRET` | Secret used for session handling (any long random string) |
 | `ADMIN_EMAIL`    | Email of the seeded administrator                     |
 | `ADMIN_PASSWORD` | Password of the seeded administrator (min 8 chars)    |
 | `ADMIN_NAME`     | Display name of the seeded administrator              |
@@ -39,6 +50,7 @@ committed to source or exposed to the browser.
 
 | Script               | Description                        |
 | -------------------- | ---------------------------------- |
+| `npm run setup`      | One-command first-time setup       |
 | `npm run dev`        | Start the dev server               |
 | `npm run build`      | Production build                   |
 | `npm run lint`       | ESLint                             |
