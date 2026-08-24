@@ -5,17 +5,16 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { prepare, run } from "./setup.mjs";
+import { isWindows, prepare, run, shellForPlatform } from "./setup.mjs";
 
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+const npm = isWindows ? "npm.cmd" : "npm";
 const PORT = process.env.PORT ?? "3000";
 const url = `http://localhost:${PORT}`;
 
 function openBrowser() {
-  const command =
-    process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
-  const args = process.platform === "win32" ? ["", url] : [url];
-  spawnSync(command, args, { stdio: "ignore", shell: process.platform === "win32" });
+  const command = process.platform === "darwin" ? "open" : isWindows ? "start" : "xdg-open";
+  const args = isWindows ? ["", url] : [url];
+  spawnSync(command, args, { stdio: "ignore", shell: isWindows });
 }
 
 prepare();
@@ -29,7 +28,7 @@ console.log(`\nStarting Invoice Studio on ${url}\nKeep this window open. Press C
 
 const server = spawn(npm, ["run", "start", "--", "--port", PORT], {
   stdio: "inherit",
-  shell: process.platform === "win32",
+  shell: shellForPlatform,
 });
 
 setTimeout(openBrowser, 3000);

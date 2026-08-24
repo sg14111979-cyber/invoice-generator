@@ -7,15 +7,32 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+// Always work from the project folder, whatever directory the launcher was run from.
+process.chdir(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
+
+export const isWindows = process.platform === "win32";
+const npm = isWindows ? "npm.cmd" : "npm";
+const npx = isWindows ? "npx.cmd" : "npx";
+
+// npm/npx are .cmd shims on Windows, which Node refuses to spawn without a shell.
+export const shellForPlatform = isWindows;
 
 export function run(command, args) {
   console.log(`\n> ${command} ${args.join(" ")}`);
-  const result = spawnSync(command, args, { stdio: "inherit", shell: false });
+  const result = spawnSync(command, args, { stdio: "inherit", shell: shellForPlatform });
+  if (result.error?.code === "ENOENT") {
+    console.error(
+      `\nCould not find ${command}. Install Node.js 20 or newer from https://nodejs.org,` +
+        " then try again.",
+    );
+    process.exit(1);
+  }
   if (result.status !== 0) {
     console.error(`\nFailed: ${command} ${args.join(" ")}`);
+    console.error("Scroll up for the reason. An internet connection is needed the first time.");
     process.exit(result.status ?? 1);
   }
 }
@@ -48,7 +65,7 @@ export function prepare() {
 }
 
 // Only prepare when executed directly (start.mjs imports and reuses these).
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   prepare();
   console.log("\nReady. Start the app with:  npm run dev\n");
 }
