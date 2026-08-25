@@ -1,0 +1,1405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Invoice Studio — simple invoice maker</title>
+<style>
+  :root {
+    --navy: #16264a;
+    --navy-soft: #24365f;
+    --ink: #1f2937;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f4f6fb;
+    --accent: #2563eb;
+    --good: #059669;
+    --bad: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+  }
+  header.app {
+    background: var(--navy);
+    color: #fff;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header.app h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  header.app .spacer { flex: 1; }
+  nav.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav.tabs button {
+    background: rgba(255,255,255,.1);
+    color: #dbe3f4;
+    border: 0;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  nav.tabs button.active { background: #fff; color: var(--navy); font-weight: 600; }
+  main { padding: 16px; max-width: 1500px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+  input, select, textarea {
+    width: 100%;
+    padding: 8px 9px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    background: #fff;
+    color: var(--ink);
+  }
+  textarea { min-height: 60px; resize: vertical; }
+  .row { display: grid; gap: 8px; margin-bottom: 8px; }
+  .row.two { grid-template-columns: 1fr 1fr; }
+  .row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  button.btn {
+    background: var(--navy);
+    color: #fff;
+    border: 0;
+    padding: 9px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+  }
+  button.btn.light { background: #fff; color: var(--navy); border: 1px solid #cbd5e1; }
+  button.btn.tiny { padding: 4px 8px; font-size: 12px; }
+  button.btn.danger { background: #fff; color: var(--bad); border: 1px solid #fecaca; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  table.items { width: 100%; border-collapse: collapse; }
+  table.items th { font-size: 11px; text-transform: uppercase; color: var(--muted); text-align: left; padding: 4px; }
+  table.items td { padding: 3px; vertical-align: top; }
+  table.items input { padding: 6px; }
+  table.list { width: 100%; border-collapse: collapse; }
+  table.list th, table.list td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; }
+  table.list th { font-size: 11px; text-transform: uppercase; color: var(--muted); }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; }
+  .pill.paid { background: #dcfce7; color: #166534; }
+  .pill.overdue { background: #fee2e2; color: #991b1b; }
+  .totals-strip { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
+  .totals-strip b { font-size: 15px; }
+
+  /* ---------- printable sheet ---------- */
+  .sheet-wrap { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px; overflow: auto; }
+  .sheet {
+    width: 794px;
+    min-height: 1000px;
+    margin: 0 auto;
+    background: #fff;
+    color: #111827;
+    padding: 42px 46px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .sheet .head { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
+  .sheet .head img { max-height: 74px; max-width: 240px; object-fit: contain; }
+  .sheet .biz-name { font-size: 19px; font-weight: 700; color: var(--navy); }
+  .sheet .doc-title { font-size: 26px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--navy); text-align: right; }
+  .sheet .meta { margin-top: 6px; text-align: right; font-size: 11.5px; }
+  .sheet .parties { display: flex; gap: 24px; margin-top: 26px; }
+  .sheet .parties > div { flex: 1; }
+  .sheet .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 4px; }
+  .sheet table.doc { width: 100%; border-collapse: collapse; margin-top: 24px; }
+  .sheet table.doc th {
+    background: var(--navy); color: #fff; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: .05em; padding: 8px 8px; text-align: left;
+  }
+  .sheet table.doc td { padding: 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  .sheet .num { text-align: right; white-space: nowrap; }
+  .sheet .sum { margin-top: 16px; display: flex; justify-content: flex-end; }
+  .sheet .sum table { border-collapse: collapse; min-width: 300px; }
+  .sheet .sum td { padding: 5px 8px; }
+  .sheet .sum tr.grand td { border-top: 2px solid var(--navy); font-size: 15px; font-weight: 700; color: var(--navy); }
+  .sheet .words { margin-top: 10px; font-size: 11.5px; font-style: italic; color: #374151; }
+  .sheet .boxes { display: flex; gap: 18px; margin-top: 26px; }
+  .sheet .box { flex: 1; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; font-size: 11.5px; }
+  .sheet .sign { margin-top: 46px; text-align: right; font-size: 11.5px; }
+  .sheet .sign .line { margin-left: auto; width: 210px; border-top: 1px solid #9ca3af; padding-top: 5px; }
+  .sheet .foot { margin-top: 26px; border-top: 1px solid #e5e7eb; padding-top: 8px; font-size: 10.5px; color: #6b7280; text-align: center; }
+  .empty { color: var(--muted); font-size: 13px; padding: 10px 0; }
+  .banner { background: #eef4ff; border: 1px solid #c7d7fe; color: #1e3a8a; padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; }
+
+  @media print {
+    body { background: #fff; }
+    header.app, nav.tabs, main > .banner, .no-print { display: none !important; }
+    main { padding: 0; max-width: none; }
+    .grid { display: block; }
+    .editor-col { display: none !important; }
+    .sheet-wrap { border: 0; padding: 0; }
+    .sheet { width: auto; min-height: 0; padding: 0; }
+    @page { size: A4; margin: 14mm; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app">
+  <h1>Invoice Studio</h1>
+  <nav class="tabs" id="tabs">
+    <button data-tab="invoice" class="active">Make invoice</button>
+    <button data-tab="saved">Saved invoices</button>
+    <button data-tab="customers">Customers</button>
+    <button data-tab="business">My business</button>
+    <button data-tab="backup">Backup</button>
+    <button data-tab="help">How to use</button>
+  </nav>
+  <span class="spacer"></span>
+  <select id="brandPicker" style="max-width:230px" title="Which business are you invoicing as?"></select>
+</header>
+
+<main>
+  <div id="firstRun" class="banner" style="display:none">
+    <b>Welcome.</b> Start on <b>My business</b> — put in your business name, address and logo once. Then add a customer and make your first invoice.
+  </div>
+
+  <!-- ===================== MAKE INVOICE ===================== -->
+  <section id="tab-invoice">
+    <div class="grid">
+      <div class="editor-col">
+        <div class="card">
+          <h2>Invoice details</h2>
+          <div class="row two">
+            <div>
+              <label>Invoice number</label>
+              <input id="f_number" />
+            </div>
+            <div>
+              <label>Document title</label>
+              <select id="f_title">
+                <option>Invoice</option>
+                <option>Tax Invoice</option>
+                <option>Proforma Invoice</option>
+                <option>Quotation</option>
+                <option>Receipt</option>
+              </select>
+            </div>
+          </div>
+          <div class="row two">
+            <div><label>Invoice date</label><input type="date" id="f_date" /></div>
+            <div><label>Due date</label><input type="date" id="f_due" /></div>
+          </div>
+          <div class="row two">
+            <div><label>Status</label>
+              <select id="f_status">
+                <option value="DRAFT">Draft</option>
+                <option value="SENT">Sent</option>
+                <option value="PAID">Paid</option>
+              </select>
+            </div>
+            <div><label>Reference / PO number</label><input id="f_reference" placeholder="Optional" /></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Bill to</h2>
+          <div class="row">
+            <label>Pick a saved customer</label>
+            <select id="f_customerPick"><option value="">-- type below instead --</option></select>
+          </div>
+          <div class="row"><div><label>Customer name</label><input id="f_cname" /></div></div>
+          <div class="row two">
+            <div><label>Email</label><input id="f_cemail" /></div>
+            <div><label>Phone</label><input id="f_cphone" /></div>
+          </div>
+          <div class="row"><div><label>Address</label><textarea id="f_caddress"></textarea></div></div>
+          <div class="row two">
+            <div><label>Tax / GST number</label><input id="f_ctax" /></div>
+            <div style="align-self:end"><button class="btn light tiny" id="saveCustomerBtn">Save this customer</button></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Items</h2>
+          <table class="items">
+            <thead>
+              <tr><th style="width:44%">Description</th><th>Qty</th><th>Rate</th><th class="num">Amount</th><th></th></tr>
+            </thead>
+            <tbody id="itemRows"></tbody>
+          </table>
+          <div class="actions" style="margin-top:8px">
+            <button class="btn light tiny" id="addItemBtn">+ Add item</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Tax, discount, shipping</h2>
+          <div class="row two">
+            <div>
+              <label>Tax</label>
+              <select id="f_taxMode">
+                <option value="NONE">No tax</option>
+                <option value="SINGLE">One tax rate</option>
+                <option value="GST">GST (India)</option>
+              </select>
+            </div>
+            <div id="taxRateWrap">
+              <label>Tax rate %</label>
+              <input type="number" step="0.01" id="f_taxRate" />
+            </div>
+          </div>
+          <div class="row two" id="gstWrap" style="display:none">
+            <div>
+              <label>GST type</label>
+              <select id="f_gstType">
+                <option value="INTRA">Same state (CGST + SGST)</option>
+                <option value="INTER">Other state (IGST)</option>
+              </select>
+            </div>
+            <div><label>GST rate %</label><input type="number" step="0.01" id="f_gstRate" /></div>
+          </div>
+          <div class="row two">
+            <div>
+              <label>Discount</label>
+              <select id="f_discountType">
+                <option value="PERCENT">Percent %</option>
+                <option value="FIXED">Fixed amount</option>
+              </select>
+            </div>
+            <div><label>Discount value</label><input type="number" step="0.01" id="f_discountValue" /></div>
+          </div>
+          <div class="row two">
+            <div><label>Shipping / other charge</label><input type="number" step="0.01" id="f_shipping" /></div>
+            <div><label>Amount already paid</label><input type="number" step="0.01" id="f_paid" /></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Notes and terms</h2>
+          <div class="row"><div><label>Notes for the customer</label><textarea id="f_notes"></textarea></div></div>
+          <div class="row"><div><label>Terms</label><textarea id="f_terms"></textarea></div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card no-print">
+          <div class="totals-strip" id="totalsStrip"></div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn" id="saveInvoiceBtn">Save invoice</button>
+            <button class="btn light" id="printBtn">Print / Save as PDF</button>
+            <button class="btn light" id="newInvoiceBtn">New blank invoice</button>
+          </div>
+          <div class="hint">"Print / Save as PDF" opens your printer window — choose <b>Save as PDF</b> as the printer to get a PDF file.</div>
+        </div>
+        <div class="sheet-wrap"><div class="sheet" id="sheet"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SAVED ===================== -->
+  <section id="tab-saved" style="display:none">
+    <div class="card">
+      <h2>Saved invoices</h2>
+      <div class="row two">
+        <div><label>Search</label><input id="searchSaved" placeholder="Customer, number, amount..." /></div>
+        <div><label>Status</label>
+          <select id="filterStatus">
+            <option value="">All</option>
+            <option value="DRAFT">Draft</option>
+            <option value="SENT">Sent</option>
+            <option value="PAID">Paid</option>
+          </select>
+        </div>
+      </div>
+      <div id="savedTotals" class="totals-strip" style="margin:8px 0 14px"></div>
+      <div id="savedList"></div>
+    </div>
+  </section>
+
+  <!-- ===================== CUSTOMERS ===================== -->
+  <section id="tab-customers" style="display:none">
+    <div class="grid">
+      <div class="card">
+        <h2 id="customerFormTitle">Add a customer</h2>
+        <div class="row"><div><label>Name</label><input id="c_name" /></div></div>
+        <div class="row two">
+          <div><label>Email</label><input id="c_email" /></div>
+          <div><label>Phone</label><input id="c_phone" /></div>
+        </div>
+        <div class="row"><div><label>Address</label><textarea id="c_address"></textarea></div></div>
+        <div class="row"><div><label>Tax / GST number</label><input id="c_tax" /></div></div>
+        <div class="actions">
+          <button class="btn" id="customerSaveBtn">Save customer</button>
+          <button class="btn light" id="customerCancelBtn" style="display:none">Cancel</button>
+        </div>
+      </div>
+      <div class="card"><h2>Your customers</h2><div id="customerList"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== BUSINESS ===================== -->
+  <section id="tab-business" style="display:none">
+    <div class="grid">
+      <div class="card">
+        <h2 id="brandFormTitle">Business details</h2>
+        <div class="row"><div><label>Business name</label><input id="b_name" /></div></div>
+        <div class="row"><div><label>Tagline (optional)</label><input id="b_tagline" /></div></div>
+        <div class="row"><div><label>Address</label><textarea id="b_address"></textarea></div></div>
+        <div class="row two">
+          <div><label>Phone</label><input id="b_phone" /></div>
+          <div><label>Email</label><input id="b_email" /></div>
+        </div>
+        <div class="row two">
+          <div><label>Website</label><input id="b_website" /></div>
+          <div><label>Tax / GST number</label><input id="b_tax" /></div>
+        </div>
+        <div class="row three">
+          <div><label>Currency</label>
+            <select id="b_currency">
+              <option value="INR">INR ₹</option>
+              <option value="USD">USD $</option>
+              <option value="EUR">EUR €</option>
+              <option value="GBP">GBP £</option>
+              <option value="AED">AED</option>
+              <option value="CAD">CAD $</option>
+              <option value="AUD">AUD $</option>
+              <option value="SGD">SGD $</option>
+            </select>
+          </div>
+          <div><label>Invoice prefix</label><input id="b_prefix" placeholder="INV" /></div>
+          <div><label>Next number</label><input type="number" id="b_next" /></div>
+        </div>
+        <div class="row two">
+          <div><label>Default tax rate %</label><input type="number" step="0.01" id="b_taxRate" /></div>
+          <div><label>Payment due in (days)</label><input type="number" id="b_terms" /></div>
+        </div>
+        <div class="row"><div><label>Bank / payment details shown on the invoice</label><textarea id="b_bank" placeholder="Bank name, account number, IFSC, UPI..."></textarea></div></div>
+        <div class="row two">
+          <div><label>Default notes</label><textarea id="b_notes"></textarea></div>
+          <div><label>Default terms</label><textarea id="b_terms_text"></textarea></div>
+        </div>
+        <div class="row"><div><label>Footer line</label><input id="b_footer" placeholder="Thank you for your business" /></div></div>
+        <div class="row">
+          <div>
+            <label>Logo (PNG or JPG)</label>
+            <input type="file" id="b_logo" accept="image/png,image/jpeg,image/webp" />
+            <div class="hint">Stored inside this app only. <span id="logoState"></span></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="brandSaveBtn">Save business</button>
+          <button class="btn light" id="brandNewBtn">Add another business</button>
+          <button class="btn light" id="brandCancelBtn" style="display:none">Cancel</button>
+          <button class="btn light tiny" id="removeLogoBtn">Remove logo</button>
+        </div>
+      </div>
+      <div class="card"><h2>Your businesses</h2><div id="brandList"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== BACKUP ===================== -->
+  <section id="tab-backup" style="display:none">
+    <div class="card" style="max-width:640px">
+      <h2>Backup and restore</h2>
+      <p>Everything you enter is saved inside this browser on this computer. Take a backup file now and then, and keep it somewhere safe (pen drive, email to yourself, cloud drive).</p>
+      <div class="actions">
+        <button class="btn" id="exportBtn">Download backup file</button>
+        <label class="btn light" style="cursor:pointer;margin:0">Restore from backup<input type="file" id="importFile" accept="application/json" style="display:none" /></label>
+      </div>
+      <p class="hint">Restoring replaces everything currently in the app with the contents of the backup file.</p>
+      <hr style="border:0;border-top:1px solid var(--line);margin:16px 0" />
+      <button class="btn danger" id="wipeBtn">Delete all data</button>
+    </div>
+  </section>
+
+  <!-- ===================== HELP ===================== -->
+  <section id="tab-help" style="display:none">
+    <div class="card" style="max-width:820px">
+      <h2>How to use</h2>
+      <ol style="line-height:1.7">
+        <li><b>My business</b> — type your business name, address, phone, GST number, bank details and upload your logo. You only do this once; it appears on every invoice. Running two businesses? Click "Add another business" and switch them from the box at the top right.</li>
+        <li><b>Customers</b> — add the people you bill. Then you can pick them on an invoice instead of typing the address every time.</li>
+        <li><b>Make invoice</b> — the number and date fill themselves in. Pick the customer, add one line per product or service, and watch the invoice on the right build itself.</li>
+        <li><b>Tax, discount, shipping</b> — choose no tax, one tax rate, or GST (same state gives CGST + SGST, other state gives IGST). Discounts can be a percent or a flat amount. Everything is totalled for you.</li>
+        <li><b>Save invoice</b> — keeps it under "Saved invoices", where you can search, reopen, duplicate or delete it.</li>
+        <li><b>Print / Save as PDF</b> — opens the print window. Pick "Save as PDF" as the printer to get a file you can email or send on WhatsApp; pick your printer for paper.</li>
+        <li><b>Backup</b> — download a backup file once in a while. If you change computer or browser, restore that file there.</li>
+      </ol>
+      <h2 style="margin-top:18px">Good to know</h2>
+      <ul style="line-height:1.7">
+        <li>No internet, no installation and no account needed — this single file is the whole app.</li>
+        <li>Your data never leaves your computer. Nothing is uploaded anywhere.</li>
+        <li>Data lives in this browser: use the same browser each time, and don't use private/incognito windows.</li>
+        <li>For a quotation or proforma, change "Document title" at the top of the invoice. Duplicate it later to turn it into the real invoice.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+/* ============================ storage ============================ */
+const KEY = "invoiceStudioSimple.v1";
+const CURRENCY = {
+  INR: { symbol: "₹", locale: "en-IN" },
+  USD: { symbol: "$", locale: "en-US" },
+  EUR: { symbol: "€", locale: "de-DE" },
+  GBP: { symbol: "£", locale: "en-GB" },
+  AED: { symbol: "AED ", locale: "en-AE" },
+  CAD: { symbol: "$", locale: "en-CA" },
+  AUD: { symbol: "$", locale: "en-AU" },
+  SGD: { symbol: "$", locale: "en-SG" },
+};
+
+function blankState() {
+  return { brands: [], customers: [], invoices: [], activeBrandId: null };
+}
+
+let state = load();
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return blankState();
+    const parsed = JSON.parse(raw);
+    return Object.assign(blankState(), parsed);
+  } catch (err) {
+    console.error("Could not read saved data", err);
+    return blankState();
+  }
+}
+
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state));
+  } catch (err) {
+    alert("Could not save your data. If your logo is a very large image, try a smaller one.");
+    console.error(err);
+  }
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/* ============================ helpers ============================ */
+const $ = (id) => document.getElementById(id);
+const num = (v) => {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const round2 = (v) => Math.round((v + Number.EPSILON) * 100) / 100;
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]),
+  );
+}
+function multiline(value) {
+  return escapeHtml(value).replace(/\n/g, "<br />");
+}
+
+function activeBrand() {
+  return state.brands.find((b) => b.id === state.activeBrandId) || state.brands[0] || null;
+}
+
+function currencyOf(brand) {
+  return (brand && brand.currency) || "INR";
+}
+
+function money(value, code) {
+  const conf = CURRENCY[code] || CURRENCY.INR;
+  return (
+    conf.symbol +
+    new Intl.NumberFormat(conf.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+      round2(num(value)),
+    )
+  );
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function addDays(iso, days) {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + num(days));
+  return d.toISOString().slice(0, 10);
+}
+function prettyDate(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/* amount in words, Indian system (used for INR) */
+const ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+  "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+const TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+function twoDigits(n) {
+  if (n < 20) return ONES[n];
+  const t = TENS[Math.floor(n / 10)];
+  const o = ONES[n % 10];
+  return o ? t + " " + o : t;
+}
+
+function indianWords(n) {
+  if (n === 0) return "Zero";
+  const parts = [];
+  const crore = Math.floor(n / 10000000);
+  n %= 10000000;
+  const lakh = Math.floor(n / 100000);
+  n %= 100000;
+  const thousand = Math.floor(n / 1000);
+  n %= 1000;
+  const hundred = Math.floor(n / 100);
+  const rest = n % 100;
+  if (crore) parts.push(indianWords(crore) + " Crore");
+  if (lakh) parts.push(twoDigits(lakh) + " Lakh");
+  if (thousand) parts.push(twoDigits(thousand) + " Thousand");
+  if (hundred) parts.push(ONES[hundred] + " Hundred");
+  if (rest) parts.push(twoDigits(rest));
+  return parts.join(" ");
+}
+
+function amountInWords(value, code) {
+  const whole = Math.floor(round2(value));
+  const paise = Math.round((round2(value) - whole) * 100);
+  const unit = code === "INR" ? "Rupees" : code;
+  const sub = code === "INR" ? "Paise" : "Cents";
+  let out = unit + " " + indianWords(whole);
+  if (paise) out += " and " + twoDigits(paise) + " " + sub;
+  return out + " only";
+}
+
+/* ============================ calculation ============================ */
+function calculate(draft) {
+  const lines = draft.items.map((item) => {
+    const amount = round2(num(item.quantity) * num(item.rate));
+    return { ...item, amount };
+  });
+  const subtotal = round2(lines.reduce((sum, l) => sum + l.amount, 0));
+
+  let discount = 0;
+  if (draft.discountType === "PERCENT") {
+    discount = (subtotal * clamp(num(draft.discountValue), 0, 100)) / 100;
+  } else {
+    discount = num(draft.discountValue);
+  }
+  discount = round2(clamp(discount, 0, subtotal));
+
+  const taxable = round2(subtotal - discount);
+  let taxRows = [];
+  let taxTotal = 0;
+
+  if (draft.taxMode === "SINGLE") {
+    const rate = Math.max(num(draft.taxRate), 0);
+    taxTotal = round2((taxable * rate) / 100);
+    if (rate > 0) taxRows.push({ label: "Tax " + rate + "%", value: taxTotal });
+  } else if (draft.taxMode === "GST") {
+    const rate = Math.max(num(draft.gstRate), 0);
+    if (draft.gstType === "INTER") {
+      taxTotal = round2((taxable * rate) / 100);
+      if (rate > 0) taxRows.push({ label: "IGST " + rate + "%", value: taxTotal });
+    } else {
+      const half = round2((taxable * rate) / 200);
+      taxTotal = round2(half * 2);
+      if (rate > 0) {
+        taxRows.push({ label: "CGST " + rate / 2 + "%", value: half });
+        taxRows.push({ label: "SGST " + rate / 2 + "%", value: half });
+      }
+    }
+  }
+
+  const shipping = round2(Math.max(num(draft.shipping), 0));
+  const total = round2(taxable + taxTotal + shipping);
+  const paid = round2(clamp(num(draft.paid), 0, total));
+  const balance = round2(total - paid);
+
+  return { lines, subtotal, discount, taxable, taxRows, taxTotal, shipping, total, paid, balance };
+}
+
+/* ============================ current draft ============================ */
+let draft = null;
+
+function nextNumberFor(brand) {
+  if (!brand) return "INV-00001";
+  const prefix = (brand.prefix || "INV").trim();
+  const seq = Math.max(1, num(brand.nextNumber) || 1);
+  return prefix + "-" + String(seq).padStart(5, "0");
+}
+
+function newDraft() {
+  const brand = activeBrand();
+  const date = today();
+  return {
+    id: null,
+    brandId: brand ? brand.id : null,
+    title: "Invoice",
+    number: nextNumberFor(brand),
+    date,
+    dueDate: addDays(date, brand ? num(brand.paymentTerms) || 15 : 15),
+    status: "DRAFT",
+    reference: "",
+    customerId: "",
+    customer: { name: "", email: "", phone: "", address: "", taxId: "" },
+    items: [{ description: "", quantity: 1, rate: 0 }],
+    taxMode: brand && num(brand.taxRate) > 0 ? "SINGLE" : "NONE",
+    taxRate: brand ? num(brand.taxRate) : 0,
+    gstType: "INTRA",
+    gstRate: brand ? num(brand.taxRate) || 18 : 18,
+    discountType: "PERCENT",
+    discountValue: 0,
+    shipping: 0,
+    paid: 0,
+    notes: brand ? brand.notes || "" : "",
+    terms: brand ? brand.terms || "" : "",
+  };
+}
+
+/* ============================ editor binding ============================ */
+function fillEditor() {
+  $("f_number").value = draft.number;
+  $("f_title").value = draft.title;
+  $("f_date").value = draft.date;
+  $("f_due").value = draft.dueDate;
+  $("f_status").value = draft.status;
+  $("f_reference").value = draft.reference;
+  $("f_customerPick").value = draft.customerId || "";
+  $("f_cname").value = draft.customer.name;
+  $("f_cemail").value = draft.customer.email;
+  $("f_cphone").value = draft.customer.phone;
+  $("f_caddress").value = draft.customer.address;
+  $("f_ctax").value = draft.customer.taxId;
+  $("f_taxMode").value = draft.taxMode;
+  $("f_taxRate").value = draft.taxRate;
+  $("f_gstType").value = draft.gstType;
+  $("f_gstRate").value = draft.gstRate;
+  $("f_discountType").value = draft.discountType;
+  $("f_discountValue").value = draft.discountValue;
+  $("f_shipping").value = draft.shipping;
+  $("f_paid").value = draft.paid;
+  $("f_notes").value = draft.notes;
+  $("f_terms").value = draft.terms;
+  renderItems();
+  syncTaxVisibility();
+  render();
+}
+
+function readEditor() {
+  draft.number = $("f_number").value;
+  draft.title = $("f_title").value;
+  draft.date = $("f_date").value;
+  draft.dueDate = $("f_due").value;
+  draft.status = $("f_status").value;
+  draft.reference = $("f_reference").value;
+  draft.customer = {
+    name: $("f_cname").value,
+    email: $("f_cemail").value,
+    phone: $("f_cphone").value,
+    address: $("f_caddress").value,
+    taxId: $("f_ctax").value,
+  };
+  draft.taxMode = $("f_taxMode").value;
+  draft.taxRate = num($("f_taxRate").value);
+  draft.gstType = $("f_gstType").value;
+  draft.gstRate = num($("f_gstRate").value);
+  draft.discountType = $("f_discountType").value;
+  draft.discountValue = num($("f_discountValue").value);
+  draft.shipping = num($("f_shipping").value);
+  draft.paid = num($("f_paid").value);
+  draft.notes = $("f_notes").value;
+  draft.terms = $("f_terms").value;
+}
+
+function syncTaxVisibility() {
+  $("taxRateWrap").style.display = draft.taxMode === "SINGLE" ? "" : "none";
+  $("gstWrap").style.display = draft.taxMode === "GST" ? "" : "none";
+}
+
+function renderItems() {
+  const body = $("itemRows");
+  const code = currencyOf(activeBrand());
+  body.innerHTML = "";
+  draft.items.forEach((item, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td><input data-k="description" placeholder="What are you charging for?" /></td>' +
+      '<td><input data-k="quantity" type="number" step="0.01" style="width:70px" /></td>' +
+      '<td><input data-k="rate" type="number" step="0.01" style="width:90px" /></td>' +
+      '<td class="num" style="padding-top:12px">' +
+      escapeHtml(money(num(item.quantity) * num(item.rate), code)) +
+      "</td>" +
+      '<td style="padding-top:8px"><button class="btn light tiny" data-act="del" title="Remove">✕</button></td>';
+    tr.querySelector('[data-k="description"]').value = item.description;
+    tr.querySelector('[data-k="quantity"]').value = item.quantity;
+    tr.querySelector('[data-k="rate"]').value = item.rate;
+    tr.querySelectorAll("input").forEach((input) => {
+      input.addEventListener("input", () => {
+        const key = input.dataset.k;
+        draft.items[index][key] = key === "description" ? input.value : num(input.value);
+        render();
+        const cell = tr.children[3];
+        cell.textContent = money(num(draft.items[index].quantity) * num(draft.items[index].rate), code);
+      });
+    });
+    tr.querySelector('[data-act="del"]').addEventListener("click", () => {
+      draft.items.splice(index, 1);
+      if (!draft.items.length) draft.items.push({ description: "", quantity: 1, rate: 0 });
+      renderItems();
+      render();
+    });
+    body.appendChild(tr);
+  });
+}
+
+/* ============================ invoice sheet ============================ */
+function render() {
+  const brand = state.brands.find((b) => b.id === draft.brandId) || activeBrand();
+  const code = currencyOf(brand);
+  const t = calculate(draft);
+
+  $("totalsStrip").innerHTML =
+    "<span>Subtotal: <b>" + escapeHtml(money(t.subtotal, code)) + "</b></span>" +
+    (t.discount ? "<span>Discount: <b>-" + escapeHtml(money(t.discount, code)) + "</b></span>" : "") +
+    (t.taxTotal ? "<span>Tax: <b>" + escapeHtml(money(t.taxTotal, code)) + "</b></span>" : "") +
+    "<span>Total: <b>" + escapeHtml(money(t.total, code)) + "</b></span>" +
+    "<span>Balance due: <b>" + escapeHtml(money(t.balance, code)) + "</b></span>";
+
+  const logo = brand && brand.logo ? '<img src="' + brand.logo + '" alt="" />' : "";
+  const bizBlock = brand
+    ? '<div class="biz-name">' + escapeHtml(brand.name || "Your business") + "</div>" +
+      (brand.tagline ? "<div>" + escapeHtml(brand.tagline) + "</div>" : "") +
+      (brand.address ? "<div>" + multiline(brand.address) + "</div>" : "") +
+      (brand.phone ? "<div>Phone: " + escapeHtml(brand.phone) + "</div>" : "") +
+      (brand.email ? "<div>" + escapeHtml(brand.email) + "</div>" : "") +
+      (brand.website ? "<div>" + escapeHtml(brand.website) + "</div>" : "") +
+      (brand.taxId ? "<div>GST/Tax No: " + escapeHtml(brand.taxId) + "</div>" : "")
+    : '<div class="biz-name">Your business</div><div>Add your details under "My business"</div>';
+
+  const itemRows = t.lines
+    .map(
+      (line, i) =>
+        "<tr><td>" + (i + 1) + "</td><td>" + (multiline(line.description) || "&nbsp;") + "</td>" +
+        '<td class="num">' + escapeHtml(String(num(line.quantity))) + "</td>" +
+        '<td class="num">' + escapeHtml(money(line.rate, code)) + "</td>" +
+        '<td class="num">' + escapeHtml(money(line.amount, code)) + "</td></tr>",
+    )
+    .join("");
+
+  const sumRow = (label, value, cls) =>
+    '<tr class="' + (cls || "") + '"><td>' + escapeHtml(label) + '</td><td class="num">' + escapeHtml(value) + "</td></tr>";
+
+  let sums = sumRow("Subtotal", money(t.subtotal, code));
+  if (t.discount) sums += sumRow("Discount", "-" + money(t.discount, code));
+  t.taxRows.forEach((row) => (sums += sumRow(row.label, money(row.value, code))));
+  if (t.shipping) sums += sumRow("Shipping", money(t.shipping, code));
+  sums += sumRow("Total", money(t.total, code), "grand");
+  if (t.paid) {
+    sums += sumRow("Paid", "-" + money(t.paid, code));
+    sums += sumRow("Balance due", money(t.balance, code), "grand");
+  }
+
+  const payBox = brand && brand.bank
+    ? '<div class="box"><div class="lbl">Payment details</div>' + multiline(brand.bank) + "</div>"
+    : "";
+  const notesBox = draft.notes || draft.terms
+    ? '<div class="box">' +
+      (draft.notes ? '<div class="lbl">Notes</div>' + multiline(draft.notes) : "") +
+      (draft.terms ? '<div class="lbl" style="margin-top:8px">Terms</div>' + multiline(draft.terms) : "") +
+      "</div>"
+    : "";
+
+  $("sheet").innerHTML =
+    '<div class="head"><div>' + logo + bizBlock + "</div>" +
+    '<div><div class="doc-title">' + escapeHtml(draft.title || "Invoice") + "</div>" +
+    '<div class="meta"><div><b>' + escapeHtml(draft.number) + "</b></div>" +
+    "<div>Date: " + escapeHtml(prettyDate(draft.date)) + "</div>" +
+    "<div>Due: " + escapeHtml(prettyDate(draft.dueDate)) + "</div>" +
+    (draft.reference ? "<div>Ref: " + escapeHtml(draft.reference) + "</div>" : "") +
+    "</div></div></div>" +
+
+    '<div class="parties"><div><div class="lbl">Bill to</div>' +
+    "<div><b>" + (escapeHtml(draft.customer.name) || "Customer name") + "</b></div>" +
+    (draft.customer.address ? "<div>" + multiline(draft.customer.address) + "</div>" : "") +
+    (draft.customer.phone ? "<div>Phone: " + escapeHtml(draft.customer.phone) + "</div>" : "") +
+    (draft.customer.email ? "<div>" + escapeHtml(draft.customer.email) + "</div>" : "") +
+    (draft.customer.taxId ? "<div>GST/Tax No: " + escapeHtml(draft.customer.taxId) + "</div>" : "") +
+    '</div><div style="text-align:right"><div class="lbl">Amount due</div>' +
+    '<div style="font-size:22px;font-weight:700;color:#16264a">' + escapeHtml(money(t.balance, code)) + "</div>" +
+    "</div></div>" +
+
+    '<table class="doc"><thead><tr><th style="width:36px">#</th><th>Description</th>' +
+    '<th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>' +
+    "<tbody>" + itemRows + "</tbody></table>" +
+
+    '<div class="sum"><table>' + sums + "</table></div>" +
+    '<div class="words">' + escapeHtml(amountInWords(t.total, code)) + "</div>" +
+
+    (payBox || notesBox ? '<div class="boxes">' + payBox + notesBox + "</div>" : "") +
+
+    '<div class="sign"><div class="line">Authorised Signatory</div><div>' +
+    escapeHtml(brand ? brand.name || "" : "") + "</div></div>" +
+
+    (brand && brand.footer ? '<div class="foot">' + escapeHtml(brand.footer) + "</div>" : "");
+}
+
+/* ============================ invoice save / list ============================ */
+function saveInvoice() {
+  readEditor();
+  if (!activeBrand()) {
+    alert('Add your business details first, under "My business".');
+    return;
+  }
+  if (!draft.customer.name.trim()) {
+    alert("Enter the customer name.");
+    return;
+  }
+  const t = calculate(draft);
+  const record = JSON.parse(JSON.stringify(draft));
+  record.total = t.total;
+  record.balance = t.balance;
+  record.savedAt = new Date().toISOString();
+
+  const clash = state.invoices.find((inv) => inv.number === record.number && inv.id !== record.id);
+  if (clash) {
+    alert("Invoice number " + record.number + " is already used. Change the number.");
+    return;
+  }
+
+  if (record.id) {
+    const index = state.invoices.findIndex((inv) => inv.id === record.id);
+    state.invoices[index] = record;
+  } else {
+    record.id = uid();
+    state.invoices.unshift(record);
+    const brand = state.brands.find((b) => b.id === record.brandId);
+    if (brand && record.number === nextNumberFor(brand)) {
+      brand.nextNumber = (num(brand.nextNumber) || 1) + 1;
+    }
+  }
+  draft.id = record.id;
+  save();
+  renderSaved();
+  alert("Saved. You can find it under 'Saved invoices'.");
+}
+
+function openInvoice(id) {
+  const found = state.invoices.find((inv) => inv.id === id);
+  if (!found) return;
+  draft = JSON.parse(JSON.stringify(found));
+  showTab("invoice");
+  fillEditor();
+}
+
+function duplicateInvoice(id) {
+  const found = state.invoices.find((inv) => inv.id === id);
+  if (!found) return;
+  const brand = state.brands.find((b) => b.id === found.brandId) || activeBrand();
+  draft = JSON.parse(JSON.stringify(found));
+  draft.id = null;
+  draft.number = nextNumberFor(brand);
+  draft.date = today();
+  draft.dueDate = addDays(draft.date, brand ? num(brand.paymentTerms) || 15 : 15);
+  draft.status = "DRAFT";
+  draft.paid = 0;
+  showTab("invoice");
+  fillEditor();
+}
+
+function deleteInvoice(id) {
+  if (!confirm("Delete this invoice?")) return;
+  state.invoices = state.invoices.filter((inv) => inv.id !== id);
+  save();
+  renderSaved();
+}
+
+function renderSaved() {
+  const term = $("searchSaved").value.trim().toLowerCase();
+  const status = $("filterStatus").value;
+  const rows = state.invoices.filter((inv) => {
+    if (status && inv.status !== status) return false;
+    if (!term) return true;
+    return (
+      (inv.number || "").toLowerCase().includes(term) ||
+      (inv.customer && (inv.customer.name || "").toLowerCase().includes(term)) ||
+      String(inv.total || "").includes(term)
+    );
+  });
+
+  const code = currencyOf(activeBrand());
+  const invoiced = rows.reduce((sum, inv) => sum + num(inv.total), 0);
+  const due = rows.reduce((sum, inv) => sum + num(inv.balance), 0);
+  $("savedTotals").innerHTML =
+    "<span>Invoices: <b>" + rows.length + "</b></span>" +
+    "<span>Billed: <b>" + escapeHtml(money(invoiced, code)) + "</b></span>" +
+    "<span>Still due: <b>" + escapeHtml(money(due, code)) + "</b></span>";
+
+  if (!rows.length) {
+    $("savedList").innerHTML = '<div class="empty">No invoices yet.</div>';
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "list";
+  table.innerHTML =
+    "<thead><tr><th>Number</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th></th></tr></thead>";
+  const body = document.createElement("tbody");
+  rows.forEach((inv) => {
+    const overdue = inv.status !== "PAID" && inv.dueDate && inv.dueDate < today() && num(inv.balance) > 0;
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + escapeHtml(inv.number) + "</td>" +
+      "<td>" + escapeHtml(inv.customer ? inv.customer.name : "") + "</td>" +
+      "<td>" + escapeHtml(prettyDate(inv.date)) + "</td>" +
+      "<td>" + escapeHtml(money(inv.total, currencyOf(state.brands.find((b) => b.id === inv.brandId)))) + "</td>" +
+      '<td><span class="pill ' + (inv.status === "PAID" ? "paid" : overdue ? "overdue" : "") + '">' +
+      escapeHtml(overdue ? "Overdue" : inv.status.charAt(0) + inv.status.slice(1).toLowerCase()) + "</span></td>" +
+      '<td class="actions">' +
+      '<button class="btn light tiny" data-act="open">Open</button>' +
+      '<button class="btn light tiny" data-act="dup">Duplicate</button>' +
+      '<button class="btn danger tiny" data-act="del">Delete</button></td>';
+    tr.querySelector('[data-act="open"]').addEventListener("click", () => openInvoice(inv.id));
+    tr.querySelector('[data-act="dup"]').addEventListener("click", () => duplicateInvoice(inv.id));
+    tr.querySelector('[data-act="del"]').addEventListener("click", () => deleteInvoice(inv.id));
+    body.appendChild(tr);
+  });
+  table.appendChild(body);
+  $("savedList").innerHTML = "";
+  $("savedList").appendChild(table);
+}
+
+/* ============================ customers ============================ */
+let editingCustomerId = null;
+
+function renderCustomers() {
+  const pick = $("f_customerPick");
+  pick.innerHTML = '<option value="">-- type below instead --</option>';
+  state.customers.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.name;
+    pick.appendChild(opt);
+  });
+  if (draft) pick.value = draft.customerId || "";
+
+  if (!state.customers.length) {
+    $("customerList").innerHTML = '<div class="empty">No customers yet.</div>';
+    return;
+  }
+  const table = document.createElement("table");
+  table.className = "list";
+  table.innerHTML = "<thead><tr><th>Name</th><th>Contact</th><th></th></tr></thead>";
+  const body = document.createElement("tbody");
+  state.customers.forEach((c) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td><b>" + escapeHtml(c.name) + "</b><br /><span class='hint'>" + multiline(c.address || "") + "</span></td>" +
+      "<td>" + escapeHtml(c.email || "") + "<br />" + escapeHtml(c.phone || "") + "</td>" +
+      '<td class="actions"><button class="btn light tiny" data-act="edit">Edit</button>' +
+      '<button class="btn light tiny" data-act="use">Bill this customer</button>' +
+      '<button class="btn danger tiny" data-act="del">Delete</button></td>';
+    tr.querySelector('[data-act="edit"]').addEventListener("click", () => {
+      editingCustomerId = c.id;
+      $("customerFormTitle").textContent = "Edit customer";
+      $("c_name").value = c.name || "";
+      $("c_email").value = c.email || "";
+      $("c_phone").value = c.phone || "";
+      $("c_address").value = c.address || "";
+      $("c_tax").value = c.taxId || "";
+      $("customerCancelBtn").style.display = "";
+    });
+    tr.querySelector('[data-act="use"]').addEventListener("click", () => {
+      applyCustomer(c.id);
+      showTab("invoice");
+    });
+    tr.querySelector('[data-act="del"]').addEventListener("click", () => {
+      if (!confirm("Delete " + c.name + "?")) return;
+      state.customers = state.customers.filter((x) => x.id !== c.id);
+      save();
+      renderCustomers();
+    });
+    body.appendChild(tr);
+  });
+  table.appendChild(body);
+  $("customerList").innerHTML = "";
+  $("customerList").appendChild(table);
+}
+
+function applyCustomer(id) {
+  const found = state.customers.find((c) => c.id === id);
+  if (!found) return;
+  draft.customerId = found.id;
+  draft.customer = {
+    name: found.name || "",
+    email: found.email || "",
+    phone: found.phone || "",
+    address: found.address || "",
+    taxId: found.taxId || "",
+  };
+  fillEditor();
+}
+
+function resetCustomerForm() {
+  editingCustomerId = null;
+  $("customerFormTitle").textContent = "Add a customer";
+  ["c_name", "c_email", "c_phone", "c_address", "c_tax"].forEach((id) => ($(id).value = ""));
+  $("customerCancelBtn").style.display = "none";
+}
+
+/* ============================ businesses (brands) ============================ */
+let editingBrandId = null;
+let pendingLogo = null;
+
+function renderBrands() {
+  const picker = $("brandPicker");
+  picker.innerHTML = "";
+  state.brands.forEach((b) => {
+    const opt = document.createElement("option");
+    opt.value = b.id;
+    opt.textContent = b.name || "(unnamed business)";
+    picker.appendChild(opt);
+  });
+  if (!state.brands.length) {
+    const opt = document.createElement("option");
+    opt.textContent = "No business added yet";
+    picker.appendChild(opt);
+  }
+  picker.value = state.activeBrandId || (state.brands[0] && state.brands[0].id) || "";
+
+  if (!state.brands.length) {
+    $("brandList").innerHTML = '<div class="empty">Fill in the form and press "Save business".</div>';
+    return;
+  }
+  const table = document.createElement("table");
+  table.className = "list";
+  table.innerHTML = "<thead><tr><th>Business</th><th>Currency</th><th></th></tr></thead>";
+  const body = document.createElement("tbody");
+  state.brands.forEach((b) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td><b>" + escapeHtml(b.name || "(unnamed)") + "</b><br /><span class='hint'>Next number: " +
+      escapeHtml(nextNumberFor(b)) + "</span></td>" +
+      "<td>" + escapeHtml(b.currency || "INR") + "</td>" +
+      '<td class="actions"><button class="btn light tiny" data-act="edit">Edit</button>' +
+      '<button class="btn light tiny" data-act="use">Invoice as this</button>' +
+      '<button class="btn danger tiny" data-act="del">Delete</button></td>';
+    tr.querySelector('[data-act="edit"]').addEventListener("click", () => loadBrandForm(b.id));
+    tr.querySelector('[data-act="use"]').addEventListener("click", () => {
+      state.activeBrandId = b.id;
+      save();
+      draft = newDraft();
+      renderBrands();
+      fillEditor();
+      showTab("invoice");
+    });
+    tr.querySelector('[data-act="del"]').addEventListener("click", () => {
+      if (!confirm("Delete " + (b.name || "this business") + "? Saved invoices stay.")) return;
+      state.brands = state.brands.filter((x) => x.id !== b.id);
+      if (state.activeBrandId === b.id) state.activeBrandId = state.brands[0] ? state.brands[0].id : null;
+      save();
+      renderBrands();
+      resetBrandForm();
+    });
+    body.appendChild(tr);
+  });
+  table.appendChild(body);
+  $("brandList").innerHTML = "";
+  $("brandList").appendChild(table);
+}
+
+function loadBrandForm(id) {
+  const b = state.brands.find((x) => x.id === id);
+  if (!b) return;
+  editingBrandId = id;
+  pendingLogo = b.logo || null;
+  $("brandFormTitle").textContent = "Edit " + (b.name || "business");
+  $("b_name").value = b.name || "";
+  $("b_tagline").value = b.tagline || "";
+  $("b_address").value = b.address || "";
+  $("b_phone").value = b.phone || "";
+  $("b_email").value = b.email || "";
+  $("b_website").value = b.website || "";
+  $("b_tax").value = b.taxId || "";
+  $("b_currency").value = b.currency || "INR";
+  $("b_prefix").value = b.prefix || "INV";
+  $("b_next").value = b.nextNumber || 1;
+  $("b_taxRate").value = b.taxRate || 0;
+  $("b_terms").value = b.paymentTerms || 15;
+  $("b_bank").value = b.bank || "";
+  $("b_notes").value = b.notes || "";
+  $("b_terms_text").value = b.terms || "";
+  $("b_footer").value = b.footer || "";
+  $("logoState").textContent = pendingLogo ? "Logo added." : "No logo yet.";
+  $("brandCancelBtn").style.display = "";
+}
+
+function resetBrandForm() {
+  editingBrandId = null;
+  pendingLogo = null;
+  $("brandFormTitle").textContent = "Business details";
+  ["b_name", "b_tagline", "b_address", "b_phone", "b_email", "b_website", "b_tax", "b_bank", "b_notes", "b_terms_text", "b_footer"]
+    .forEach((id) => ($(id).value = ""));
+  $("b_currency").value = "INR";
+  $("b_prefix").value = "INV";
+  $("b_next").value = 1;
+  $("b_taxRate").value = 0;
+  $("b_terms").value = 15;
+  $("b_logo").value = "";
+  $("logoState").textContent = "No logo yet.";
+  $("brandCancelBtn").style.display = "none";
+}
+
+function saveBrand() {
+  const name = $("b_name").value.trim();
+  if (!name) {
+    alert("Enter your business name.");
+    return;
+  }
+  const data = {
+    name,
+    tagline: $("b_tagline").value.trim(),
+    address: $("b_address").value,
+    phone: $("b_phone").value.trim(),
+    email: $("b_email").value.trim(),
+    website: $("b_website").value.trim(),
+    taxId: $("b_tax").value.trim(),
+    currency: $("b_currency").value,
+    prefix: $("b_prefix").value.trim() || "INV",
+    nextNumber: Math.max(1, num($("b_next").value) || 1),
+    taxRate: num($("b_taxRate").value),
+    paymentTerms: num($("b_terms").value) || 15,
+    bank: $("b_bank").value,
+    notes: $("b_notes").value,
+    terms: $("b_terms_text").value,
+    footer: $("b_footer").value.trim(),
+    logo: pendingLogo,
+  };
+
+  if (editingBrandId) {
+    const index = state.brands.findIndex((b) => b.id === editingBrandId);
+    state.brands[index] = Object.assign(state.brands[index], data);
+  } else {
+    data.id = uid();
+    state.brands.push(data);
+    state.activeBrandId = data.id;
+  }
+  save();
+  renderBrands();
+  const keepId = editingBrandId;
+  resetBrandForm();
+  if (keepId) loadBrandForm(keepId);
+  if (draft && !draft.id) {
+    draft = newDraft();
+    fillEditor();
+  } else {
+    render();
+  }
+  refreshFirstRun();
+  alert("Business saved.");
+}
+
+/* ============================ tabs ============================ */
+function showTab(name) {
+  ["invoice", "saved", "customers", "business", "backup", "help"].forEach((tab) => {
+    $("tab-" + tab).style.display = tab === name ? "" : "none";
+  });
+  document.querySelectorAll("#tabs button").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === name);
+  });
+  if (name === "saved") renderSaved();
+  if (name === "customers") renderCustomers();
+  if (name === "business") renderBrands();
+}
+
+function refreshFirstRun() {
+  $("firstRun").style.display = state.brands.length ? "none" : "";
+}
+
+/* ============================ wiring ============================ */
+document.querySelectorAll("#tabs button").forEach((btn) => {
+  btn.addEventListener("click", () => showTab(btn.dataset.tab));
+});
+
+[
+  "f_number", "f_title", "f_date", "f_due", "f_status", "f_reference",
+  "f_cname", "f_cemail", "f_cphone", "f_caddress", "f_ctax",
+  "f_taxMode", "f_taxRate", "f_gstType", "f_gstRate",
+  "f_discountType", "f_discountValue", "f_shipping", "f_paid", "f_notes", "f_terms",
+].forEach((id) => {
+  $(id).addEventListener("input", () => {
+    readEditor();
+    syncTaxVisibility();
+    render();
+  });
+  $(id).addEventListener("change", () => {
+    readEditor();
+    syncTaxVisibility();
+    render();
+  });
+});
+
+$("f_customerPick").addEventListener("change", (event) => {
+  draft.customerId = event.target.value;
+  if (event.target.value) applyCustomer(event.target.value);
+});
+
+$("addItemBtn").addEventListener("click", () => {
+  draft.items.push({ description: "", quantity: 1, rate: 0 });
+  renderItems();
+  render();
+});
+
+$("saveCustomerBtn").addEventListener("click", () => {
+  readEditor();
+  if (!draft.customer.name.trim()) {
+    alert("Type the customer name first.");
+    return;
+  }
+  const existing = state.customers.find((c) => c.id === draft.customerId);
+  if (existing) {
+    Object.assign(existing, draft.customer);
+  } else {
+    const record = Object.assign({ id: uid() }, draft.customer);
+    state.customers.push(record);
+    draft.customerId = record.id;
+  }
+  save();
+  renderCustomers();
+  alert("Customer saved.");
+});
+
+$("saveInvoiceBtn").addEventListener("click", saveInvoice);
+$("printBtn").addEventListener("click", () => {
+  readEditor();
+  render();
+  window.print();
+});
+$("newInvoiceBtn").addEventListener("click", () => {
+  draft = newDraft();
+  fillEditor();
+});
+
+$("brandPicker").addEventListener("change", (event) => {
+  if (!event.target.value) return;
+  state.activeBrandId = event.target.value;
+  save();
+  draft = newDraft();
+  fillEditor();
+});
+
+$("customerSaveBtn").addEventListener("click", () => {
+  const name = $("c_name").value.trim();
+  if (!name) {
+    alert("Enter the customer name.");
+    return;
+  }
+  const data = {
+    name,
+    email: $("c_email").value.trim(),
+    phone: $("c_phone").value.trim(),
+    address: $("c_address").value,
+    taxId: $("c_tax").value.trim(),
+  };
+  if (editingCustomerId) {
+    const index = state.customers.findIndex((c) => c.id === editingCustomerId);
+    state.customers[index] = Object.assign(state.customers[index], data);
+  } else {
+    state.customers.push(Object.assign({ id: uid() }, data));
+  }
+  save();
+  resetCustomerForm();
+  renderCustomers();
+});
+$("customerCancelBtn").addEventListener("click", resetCustomerForm);
+
+$("brandSaveBtn").addEventListener("click", saveBrand);
+$("brandNewBtn").addEventListener("click", resetBrandForm);
+$("brandCancelBtn").addEventListener("click", resetBrandForm);
+$("removeLogoBtn").addEventListener("click", () => {
+  pendingLogo = null;
+  $("b_logo").value = "";
+  $("logoState").textContent = "Logo removed — press Save business.";
+});
+$("b_logo").addEventListener("change", (event) => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    alert("Please use a logo smaller than 1 MB.");
+    event.target.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingLogo = String(reader.result);
+    $("logoState").textContent = "Logo ready — press Save business.";
+  };
+  reader.readAsDataURL(file);
+});
+
+$("searchSaved").addEventListener("input", renderSaved);
+$("filterStatus").addEventListener("change", renderSaved);
+
+$("exportBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "invoice-studio-backup-" + today() + ".json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
+$("importFile").addEventListener("change", (event) => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      if (!parsed || !Array.isArray(parsed.brands)) throw new Error("not a backup file");
+      if (!confirm("Replace everything in the app with this backup?")) return;
+      state = Object.assign(blankState(), parsed);
+      save();
+      draft = newDraft();
+      renderBrands();
+      renderCustomers();
+      renderSaved();
+      fillEditor();
+      refreshFirstRun();
+      alert("Backup restored.");
+    } catch (err) {
+      alert("That file is not a valid backup.");
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+});
+
+$("wipeBtn").addEventListener("click", () => {
+  if (!confirm("Delete every business, customer and invoice in this app? This cannot be undone.")) return;
+  state = blankState();
+  save();
+  draft = newDraft();
+  renderBrands();
+  renderCustomers();
+  renderSaved();
+  fillEditor();
+  refreshFirstRun();
+});
+
+/* ============================ start ============================ */
+draft = newDraft();
+renderBrands();
+renderCustomers();
+renderSaved();
+fillEditor();
+refreshFirstRun();
+</script>
+</body>
+</html>

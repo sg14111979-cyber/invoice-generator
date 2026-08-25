@@ -3,6 +3,15 @@
 Secure, multi-brand invoice generator. Sign-in is required before any invoice can be
 created, viewed or downloaded.
 
+## Two editions
+
+- **Full web app** (this repository, below): accounts and passwords, per-user data
+  isolation, admin users, shared database. Needs Node.js 20+.
+- **Simple offline edition** (`simple-offline/`): a single HTML file you double-click.
+  No install, no Node.js, no server, no login — data lives in that browser's local
+  storage on that one computer, with JSON backup/restore. Meant for one person
+  invoicing from one machine; see `simple-offline/README.txt`.
+
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript
