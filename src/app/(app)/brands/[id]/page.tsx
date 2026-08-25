@@ -32,6 +32,7 @@ export default async function EditBrandPage({
           addressLine2: brand.addressLine2,
           city: brand.city,
           state: brand.state,
+          stateCode: brand.stateCode,
           postalCode: brand.postalCode,
           country: brand.country,
           phone: brand.phone,

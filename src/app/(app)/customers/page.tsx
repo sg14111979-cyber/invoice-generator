@@ -57,6 +57,7 @@ export default async function CustomersPage({
           addressLine2: customer.addressLine2,
           city: customer.city,
           state: customer.state,
+          stateCode: customer.stateCode,
           country: customer.country,
           postalCode: customer.postalCode,
           email: customer.email,

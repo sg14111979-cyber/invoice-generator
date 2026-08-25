@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
-import { NumberField, TextAreaField, TextField } from "@/components/field";
+import { CheckboxField, NumberField, TextAreaField, TextField } from "@/components/field";
 import { api, ApiError } from "@/lib/client";
 import { formatMoney } from "@/lib/currency";
 
@@ -13,13 +13,19 @@ export interface ItemValues {
   description: string;
   unit: string;
   rate: number;
+  purchaseRate: number;
   taxRate: number;
   hsnCode: string;
   notes: string;
+  trackStock: boolean;
+  openingStock: number;
+  lowStockLevel: number;
 }
 
 export interface ItemRow extends ItemValues {
   id: string;
+  onHand: number;
+  lowStock: boolean;
 }
 
 export const EMPTY_ITEM: ItemValues = {
@@ -28,9 +34,13 @@ export const EMPTY_ITEM: ItemValues = {
   description: "",
   unit: "",
   rate: 0,
+  purchaseRate: 0,
   taxRate: 0,
   hsnCode: "",
   notes: "",
+  trackStock: true,
+  openingStock: 0,
+  lowStockLevel: 0,
 };
 
 export function ItemsManager({
@@ -69,9 +79,13 @@ export function ItemsManager({
       description: item.description,
       unit: item.unit,
       rate: item.rate,
+      purchaseRate: item.purchaseRate,
       taxRate: item.taxRate,
       hsnCode: item.hsnCode,
       notes: item.notes,
+      trackStock: item.trackStock,
+      openingStock: item.openingStock,
+      lowStockLevel: item.lowStockLevel,
     });
     setFormOpen(true);
     setError("");
@@ -188,10 +202,17 @@ export function ItemsManager({
               placeholder="ream"
             />
             <NumberField
-              label="Rate"
+              label="Selling rate"
               value={values.rate}
               onChange={(value) => field("rate", value)}
               step={0.01}
+            />
+            <NumberField
+              label="Purchase rate"
+              value={values.purchaseRate}
+              onChange={(value) => field("purchaseRate", value)}
+              step={0.01}
+              hint="Used to value the stock you hold."
             />
             <NumberField
               label="Tax rate"
@@ -219,6 +240,26 @@ export function ItemsManager({
               onChange={(value) => field("notes", value)}
               className="sm:col-span-2 lg:col-span-3"
               rows={2}
+            />
+            <CheckboxField
+              label="Track stock for this item"
+              checked={values.trackStock}
+              onChange={(value) => field("trackStock", value)}
+              hint="Purchases add quantity, invoices remove it. Turn off for services."
+            />
+            <NumberField
+              label="Opening stock"
+              value={values.openingStock}
+              onChange={(value) => field("openingStock", value)}
+              step={0.01}
+              hint="Quantity you already had before using this app."
+            />
+            <NumberField
+              label="Low stock alert at"
+              value={values.lowStockLevel}
+              onChange={(value) => field("lowStockLevel", value)}
+              step={0.01}
+              hint="0 turns the alert off."
             />
           </div>
           <div className="flex gap-3">
@@ -256,6 +297,7 @@ export function ItemsManager({
                   <th className="px-5 py-3 font-semibold">Unit</th>
                   <th className="px-5 py-3 text-right font-semibold">Rate</th>
                   <th className="px-5 py-3 text-right font-semibold">Tax</th>
+                  <th className="px-5 py-3 text-right font-semibold">In stock</th>
                   <th className="px-5 py-3 font-semibold">HSN / SAC</th>
                   <th className="px-5 py-3 font-semibold">Actions</th>
                 </tr>
@@ -275,6 +317,19 @@ export function ItemsManager({
                       {formatMoney(item.rate, currency)}
                     </td>
                     <td className="px-5 py-3 text-right text-slate-600">{item.taxRate}%</td>
+                    <td className="px-5 py-3 text-right">
+                      {item.trackStock ? (
+                        <span
+                          className={
+                            item.lowStock ? "font-semibold text-red-600" : "text-slate-900"
+                          }
+                        >
+                          {item.onHand} {item.unit}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">Not tracked</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-slate-600">{item.hsnCode || "\u2014"}</td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-2">

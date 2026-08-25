@@ -19,6 +19,7 @@ export interface BrandOption {
   fromWebsite: string;
   fromTaxNumber: string;
   fromRegistration: string;
+  fromStateCode: string;
 }
 
 export interface ItemOption {
@@ -40,6 +41,7 @@ export interface CustomerOption {
   email: string;
   phone: string;
   taxNumber: string;
+  stateCode: string;
 }
 
 let itemCounter = 0;
@@ -47,6 +49,7 @@ export function newItem(): DraftItem {
   itemCounter += 1;
   return {
     key: `item-${Date.now()}-${itemCounter}`,
+    itemId: null,
     code: "",
     description: "",
     quantity: 1,
@@ -77,6 +80,7 @@ export function toBrandOption(brand: Brand & { settings: BrandSettings | null })
     fromWebsite: brand.website,
     fromTaxNumber: brand.taxNumber,
     fromRegistration: brand.registrationNumber,
+    fromStateCode: brand.stateCode,
   };
 }
 
@@ -97,6 +101,7 @@ export function toItemOption(item: Item): ItemOption {
 export function itemToDraftItem(option: ItemOption, current: DraftItem): DraftItem {
   return {
     ...current,
+    itemId: option.id,
     code: option.code,
     description: option.description || option.name,
     unit: option.unit,
@@ -121,6 +126,7 @@ export function toCustomerOption(customer: Customer): CustomerOption {
     email: customer.email,
     phone: customer.phone,
     taxNumber: customer.taxNumber,
+    stateCode: customer.stateCode,
   };
 }
 
@@ -161,6 +167,7 @@ export function newInvoiceDraft(brand: BrandOption, invoiceNumber: string): Invo
     fromWebsite: brand.fromWebsite,
     fromTaxNumber: brand.fromTaxNumber,
     fromRegistration: brand.fromRegistration,
+    fromStateCode: brand.fromStateCode,
 
     toName: "",
     toCompany: "",
@@ -168,6 +175,7 @@ export function newInvoiceDraft(brand: BrandOption, invoiceNumber: string): Invo
     toEmail: "",
     toPhone: "",
     toTaxNumber: "",
+    toStateCode: "",
 
     taxMode: taxMode as InvoiceInput["taxMode"],
     taxRate: settings?.defaultTaxRate ?? 0,
@@ -218,6 +226,7 @@ export function draftFromInvoice(invoice: InvoiceWithItems): InvoiceDraft {
     fromWebsite: invoice.fromWebsite,
     fromTaxNumber: invoice.fromTaxNumber,
     fromRegistration: invoice.fromRegistration,
+    fromStateCode: invoice.fromStateCode,
 
     toName: invoice.toName,
     toCompany: invoice.toCompany,
@@ -225,6 +234,7 @@ export function draftFromInvoice(invoice: InvoiceWithItems): InvoiceDraft {
     toEmail: invoice.toEmail,
     toPhone: invoice.toPhone,
     toTaxNumber: invoice.toTaxNumber,
+    toStateCode: invoice.toStateCode,
 
     taxMode: invoice.taxMode as InvoiceInput["taxMode"],
     taxRate: invoice.taxRate,
@@ -256,6 +266,7 @@ export function draftFromInvoice(invoice: InvoiceWithItems): InvoiceDraft {
         ? invoice.items.map((item) => ({
             key: item.id,
             id: item.id,
+            itemId: item.itemId,
             code: item.code,
             description: item.description,
             quantity: item.quantity,
@@ -288,6 +299,7 @@ export function draftToView(draft: InvoiceDraft, logoPath: string | null): Invoi
     fromWebsite: draft.fromWebsite,
     fromTaxNumber: draft.fromTaxNumber,
     fromRegistration: draft.fromRegistration,
+    fromStateCode: draft.fromStateCode,
 
     toName: draft.toName,
     toCompany: draft.toCompany,
@@ -295,6 +307,7 @@ export function draftToView(draft: InvoiceDraft, logoPath: string | null): Invoi
     toEmail: draft.toEmail,
     toPhone: draft.toPhone,
     toTaxNumber: draft.toTaxNumber,
+    toStateCode: draft.toStateCode,
 
     items: draft.items.map((item) => ({
       code: item.code,

@@ -1,6 +1,7 @@
 import { formatMoney } from "@/lib/currency";
 import { formatDisplayDate } from "@/lib/format";
 import { hasPaymentDetails, type InvoiceView } from "@/lib/invoice-view";
+import { stateLabel } from "@/lib/states";
 
 interface TemplateSkin {
   accentBar: string;
@@ -96,6 +97,9 @@ export function InvoicePreview({ view }: { view: InvoiceView }) {
               {view.fromWebsite ? <p>{view.fromWebsite}</p> : null}
               {view.fromTaxNumber ? <p>Tax No: {view.fromTaxNumber}</p> : null}
               {view.fromRegistration ? <p>Reg No: {view.fromRegistration}</p> : null}
+              {stateLabel(view.fromStateCode) ? (
+                <p>State: {stateLabel(view.fromStateCode)}</p>
+              ) : null}
             </div>
           </div>
 
@@ -141,6 +145,9 @@ export function InvoicePreview({ view }: { view: InvoiceView }) {
               {view.toEmail ? <p>{view.toEmail}</p> : null}
               {view.toPhone ? <p>{view.toPhone}</p> : null}
               {view.toTaxNumber ? <p>Tax No: {view.toTaxNumber}</p> : null}
+              {stateLabel(view.toStateCode) ? (
+                <p>Place of supply: {stateLabel(view.toStateCode)}</p>
+              ) : null}
             </div>
           </div>
 

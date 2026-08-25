@@ -2,6 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 import { formatMoney } from "@/lib/currency";
 import { formatDisplayDate } from "@/lib/format";
 import { hasPaymentDetails, type InvoiceView } from "@/lib/invoice-view";
+import { stateLabel } from "@/lib/states";
 
 export interface PdfLogo {
   data: Buffer;
@@ -121,6 +122,9 @@ export function InvoiceDocument({ view, logo }: { view: InvoiceView; logo: PdfLo
             {view.fromTaxNumber ? (
               <Text style={styles.muted}>Tax No: {view.fromTaxNumber}</Text>
             ) : null}
+            {stateLabel(view.fromStateCode) ? (
+              <Text style={styles.muted}>State: {stateLabel(view.fromStateCode)}</Text>
+            ) : null}
             {view.fromRegistration ? (
               <Text style={styles.muted}>Reg No: {view.fromRegistration}</Text>
             ) : null}
@@ -147,6 +151,9 @@ export function InvoiceDocument({ view, logo }: { view: InvoiceView; logo: PdfLo
             {view.toEmail ? <Text style={styles.muted}>{view.toEmail}</Text> : null}
             {view.toPhone ? <Text style={styles.muted}>{view.toPhone}</Text> : null}
             {view.toTaxNumber ? <Text style={styles.muted}>Tax No: {view.toTaxNumber}</Text> : null}
+            {stateLabel(view.toStateCode) ? (
+              <Text style={styles.muted}>Place of supply: {stateLabel(view.toStateCode)}</Text>
+            ) : null}
           </View>
           <View>
             <Text style={{ ...styles.sectionLabel, textAlign: "right" }}>BALANCE DUE</Text>

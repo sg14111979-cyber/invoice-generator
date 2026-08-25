@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -9,55 +8,64 @@ import {
   EMPTY_CUSTOMER,
   type CustomerValues,
 } from "@/components/customer-fields";
+import { TextAreaField } from "@/components/field";
 import { api, ApiError } from "@/lib/client";
 import { formatMoney } from "@/lib/currency";
+import { stateLabel } from "@/lib/states";
 
-export interface CustomerRow extends CustomerValues {
+export interface SupplierValues extends CustomerValues {
+  notes: string;
+}
+
+export const EMPTY_SUPPLIER: SupplierValues = { ...EMPTY_CUSTOMER, notes: "" };
+
+export interface SupplierRow extends SupplierValues {
   id: string;
-  invoiceCount: number;
-  totalInvoiced: number;
+  billCount: number;
+  totalPurchased: number;
   outstanding: number;
 }
 
-export function CustomersManager({
-  customers,
+export function SuppliersManager({
+  suppliers,
   initialQuery,
   currency,
 }: {
-  customers: CustomerRow[];
+  suppliers: SupplierRow[];
   initialQuery: string;
   currency: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [values, setValues] = useState<CustomerValues>(EMPTY_CUSTOMER);
+  const [values, setValues] = useState<SupplierValues>(EMPTY_SUPPLIER);
   const [formOpen, setFormOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
   function openCreate() {
     setEditingId(null);
-    setValues(EMPTY_CUSTOMER);
+    setValues(EMPTY_SUPPLIER);
     setFormOpen(true);
     setError("");
   }
 
-  function openEdit(customer: CustomerRow) {
-    setEditingId(customer.id);
+  function openEdit(supplier: SupplierRow) {
+    setEditingId(supplier.id);
     setValues({
-      name: customer.name,
-      companyName: customer.companyName,
-      addressLine1: customer.addressLine1,
-      addressLine2: customer.addressLine2,
-      city: customer.city,
-      state: customer.state,
-      stateCode: customer.stateCode,
-      country: customer.country,
-      postalCode: customer.postalCode,
-      email: customer.email,
-      phone: customer.phone,
-      taxNumber: customer.taxNumber,
+      name: supplier.name,
+      companyName: supplier.companyName,
+      addressLine1: supplier.addressLine1,
+      addressLine2: supplier.addressLine2,
+      city: supplier.city,
+      state: supplier.state,
+      stateCode: supplier.stateCode,
+      country: supplier.country,
+      postalCode: supplier.postalCode,
+      email: supplier.email,
+      phone: supplier.phone,
+      taxNumber: supplier.taxNumber,
+      notes: supplier.notes,
     });
     setFormOpen(true);
     setError("");
@@ -69,12 +77,12 @@ export function CustomersManager({
     setError("");
     try {
       if (editingId) {
-        await api(`/api/customers/${editingId}`, { method: "PATCH", body: values });
+        await api(`/api/suppliers/${editingId}`, { method: "PATCH", body: values });
       } else {
-        await api("/api/customers", { method: "POST", body: values });
+        await api("/api/suppliers", { method: "POST", body: values });
       }
       setFormOpen(false);
-      setValues(EMPTY_CUSTOMER);
+      setValues(EMPTY_SUPPLIER);
       setEditingId(null);
       router.refresh();
     } catch (caught) {
@@ -83,7 +91,7 @@ export function CustomersManager({
           ? caught.issues
             ? Object.values(caught.issues).flat().filter(Boolean).join(" ") || caught.message
             : caught.message
-          : "Could not save the customer.";
+          : "Could not save the supplier.";
       setError(message);
     } finally {
       setPending(false);
@@ -93,10 +101,10 @@ export function CustomersManager({
   async function remove(id: string) {
     setError("");
     try {
-      await api(`/api/customers/${id}`, { method: "DELETE" });
+      await api(`/api/suppliers/${id}`, { method: "DELETE" });
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Could not delete the customer.");
+      setError(caught instanceof ApiError ? caught.message : "Could not delete the supplier.");
     }
   }
 
@@ -104,7 +112,7 @@ export function CustomersManager({
     event.preventDefault();
     const params = new URLSearchParams();
     if (query.trim()) params.set("q", query.trim());
-    router.push(`/customers${params.size ? `?${params.toString()}` : ""}`);
+    router.push(`/suppliers${params.size ? `?${params.toString()}` : ""}`);
   }
 
   return (
@@ -119,7 +127,7 @@ export function CustomersManager({
         <form className="flex flex-1 gap-2" onSubmit={search}>
           <input
             className="input max-w-sm"
-            placeholder="Search name, company or email"
+            placeholder="Search name, company, GSTIN or email"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -132,7 +140,7 @@ export function CustomersManager({
               className="btn-secondary"
               onClick={() => {
                 setQuery("");
-                router.push("/customers");
+                router.push("/suppliers");
               }}
             >
               Clear
@@ -140,19 +148,28 @@ export function CustomersManager({
           ) : null}
         </form>
         <button className="btn-primary" onClick={openCreate}>
-          + Add customer
+          + Add supplier
         </button>
       </div>
 
       {formOpen ? (
         <form className="card space-y-4 p-5" onSubmit={save}>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            {editingId ? "Edit customer" : "New customer"}
+            {editingId ? "Edit supplier" : "New supplier"}
           </h2>
-          <CustomerFields values={values} onChange={setValues} />
+          <CustomerFields
+            values={values}
+            onChange={(next) => setValues((current) => ({ ...current, ...next }))}
+          />
+          <TextAreaField
+            label="Notes"
+            value={values.notes}
+            onChange={(value) => setValues((current) => ({ ...current, notes: value }))}
+            rows={2}
+          />
           <div className="flex gap-3">
             <button className="btn-primary" type="submit" disabled={pending}>
-              {pending ? "Saving\u2026" : "Save customer"}
+              {pending ? "Saving\u2026" : "Save supplier"}
             </button>
             <button
               type="button"
@@ -169,55 +186,54 @@ export function CustomersManager({
       ) : null}
 
       <div className="card">
-        {customers.length === 0 ? (
+        {suppliers.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-slate-500">
-            {initialQuery ? "No customers match that search." : "No customers yet."}
+            {initialQuery ? "No suppliers match that search." : "No suppliers yet."}
           </p>
         ) : (
           <div className="table-wrap">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">Customer</th>
+                  <th className="px-5 py-3 font-semibold">Supplier</th>
                   <th className="px-5 py-3 font-semibold">Contact</th>
-                  <th className="px-5 py-3 text-right font-semibold">Invoices</th>
-                  <th className="px-5 py-3 text-right font-semibold">Invoiced</th>
+                  <th className="px-5 py-3 font-semibold">State</th>
+                  <th className="px-5 py-3 text-right font-semibold">Bills</th>
+                  <th className="px-5 py-3 text-right font-semibold">Purchased</th>
                   <th className="px-5 py-3 text-right font-semibold">Outstanding</th>
                   <th className="px-5 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {customers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-slate-50">
+                {suppliers.map((supplier) => (
+                  <tr key={supplier.id} className="hover:bg-slate-50">
                     <td className="px-5 py-3">
-                      <Link
-                        href={`/customers/${customer.id}`}
-                        className="font-semibold text-navy-700 hover:underline"
-                      >
-                        {customer.name}
-                      </Link>
-                      <p className="text-xs text-slate-500">{customer.companyName || "\u2014"}</p>
+                      <p className="font-semibold text-slate-900">{supplier.name}</p>
+                      <p className="text-xs text-slate-500">{supplier.companyName || "\u2014"}</p>
                     </td>
                     <td className="px-5 py-3 text-slate-600">
-                      <p>{customer.email || "\u2014"}</p>
-                      <p className="text-xs text-slate-500">{customer.phone || "\u2014"}</p>
+                      <p>{supplier.email || "\u2014"}</p>
+                      <p className="text-xs text-slate-500">{supplier.phone || "\u2014"}</p>
                     </td>
-                    <td className="px-5 py-3 text-right text-slate-700">{customer.invoiceCount}</td>
+                    <td className="px-5 py-3 text-slate-600">
+                      {stateLabel(supplier.stateCode) || "\u2014"}
+                    </td>
+                    <td className="px-5 py-3 text-right text-slate-700">{supplier.billCount}</td>
                     <td className="px-5 py-3 text-right text-slate-700">
-                      {formatMoney(customer.totalInvoiced, currency)}
+                      {formatMoney(supplier.totalPurchased, currency)}
                     </td>
                     <td className="px-5 py-3 text-right font-medium text-slate-900">
-                      {formatMoney(customer.outstanding, currency)}
+                      {formatMoney(supplier.outstanding, currency)}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <button className="btn-secondary" onClick={() => openEdit(customer)}>
+                        <button className="btn-secondary" onClick={() => openEdit(supplier)}>
                           Edit
                         </button>
                         <ConfirmButton
-                          message="Delete customer?"
+                          message="Delete supplier?"
                           confirmLabel="Delete"
-                          onConfirm={() => remove(customer.id)}
+                          onConfirm={() => remove(supplier.id)}
                         >
                           Delete
                         </ConfirmButton>

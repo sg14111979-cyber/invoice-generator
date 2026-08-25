@@ -1,6 +1,7 @@
 "use client";
 
 import { TextField } from "@/components/field";
+import { StateField } from "@/components/state-field";
 
 export interface CustomerValues {
   name: string;
@@ -9,6 +10,7 @@ export interface CustomerValues {
   addressLine2: string;
   city: string;
   state: string;
+  stateCode: string;
   country: string;
   postalCode: string;
   email: string;
@@ -23,6 +25,7 @@ export const EMPTY_CUSTOMER: CustomerValues = {
   addressLine2: "",
   city: "",
   state: "",
+  stateCode: "",
   country: "",
   postalCode: "",
   email: "",
@@ -67,6 +70,13 @@ export function CustomerFields({
       />
       <TextField label="City" value={values.city} onChange={(value) => set("city", value)} />
       <TextField label="State" value={values.state} onChange={(value) => set("state", value)} />
+      <StateField
+        code={values.stateCode}
+        gstin={values.taxNumber}
+        onChange={(code, name) =>
+          onChange({ ...values, stateCode: code, state: name || values.state })
+        }
+      />
       <TextField
         label="Postal code"
         value={values.postalCode}

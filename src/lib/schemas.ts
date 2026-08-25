@@ -1,8 +1,14 @@
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/currency";
+import { STATE_CODES } from "@/lib/states";
 
 const currencyEnum = z.enum(CURRENCY_CODES as [string, ...string[]]);
 const optionalText = (max = 500) => z.string().trim().max(max).default("");
+
+// Blank stays valid so non-Indian addresses and older records keep working.
+const stateCodeField = z
+  .union([z.enum(STATE_CODES as [string, ...string[]]), z.literal("")])
+  .default("");
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
@@ -70,6 +76,7 @@ export const brandSchema = z.object({
   addressLine2: optionalText(200),
   city: optionalText(120),
   state: optionalText(120),
+  stateCode: stateCodeField,
   postalCode: optionalText(40),
   country: optionalText(120),
   phone: optionalText(60),
@@ -113,11 +120,17 @@ export const customerSchema = z.object({
   addressLine2: optionalText(200),
   city: optionalText(120),
   state: optionalText(120),
+  stateCode: stateCodeField,
   country: optionalText(120),
   postalCode: optionalText(40),
   email: z.union([z.string().trim().email(), z.literal("")]).default(""),
   phone: optionalText(60),
   taxNumber: optionalText(60),
+});
+
+export const supplierSchema = customerSchema.extend({
+  name: z.string().trim().min(1, "Supplier name is required").max(160),
+  notes: optionalText(1000),
 });
 
 export const itemSchema = z.object({
@@ -126,13 +139,30 @@ export const itemSchema = z.object({
   description: optionalText(500),
   unit: optionalText(40),
   rate: z.coerce.number().min(0).max(1_000_000_000).default(0),
+  purchaseRate: z.coerce.number().min(0).max(1_000_000_000).default(0),
   taxRate: z.coerce.number().min(0).max(100).default(0),
   hsnCode: optionalText(40),
   notes: optionalText(1000),
+  trackStock: z.boolean().default(true),
+  openingStock: z.coerce.number().min(-1_000_000).max(1_000_000).default(0),
+  lowStockLevel: z.coerce.number().min(0).max(1_000_000).default(0),
+});
+
+export const stockAdjustmentSchema = z.object({
+  itemId: z.string().min(1, "Select an item"),
+  quantity: z.coerce
+    .number()
+    .min(-1_000_000)
+    .max(1_000_000)
+    .refine((value) => value !== 0, "Enter a quantity other than zero"),
+  unitCost: z.coerce.number().min(0).max(1_000_000_000).default(0),
+  note: optionalText(300),
+  occurredAt: z.string().optional(),
 });
 
 export const invoiceItemSchema = z.object({
   id: z.string().optional(),
+  itemId: z.string().nullable().optional(),
   code: optionalText(40),
   description: optionalText(500),
   quantity: z.coerce.number().min(0).max(1_000_000).default(1),
@@ -178,6 +208,9 @@ export const invoiceSchema = z.object({
   toPhone: optionalText(60),
   toTaxNumber: optionalText(60),
 
+  fromStateCode: stateCodeField,
+  toStateCode: stateCodeField,
+
   taxMode: z.enum(["NONE", "SINGLE", "GST"]).default("SINGLE"),
   taxRate: z.coerce.number().min(0).max(100).default(0),
   cgstRate: z.coerce.number().min(0).max(100).default(0),
@@ -208,7 +241,56 @@ export const invoiceSchema = z.object({
   items: z.array(invoiceItemSchema).max(500).default([]),
 });
 
+export const PURCHASE_STATUSES = [
+  "DRAFT",
+  "RECEIVED",
+  "PARTIALLY_PAID",
+  "PAID",
+  "CANCELLED",
+] as const;
+
+export const purchaseSchema = z.object({
+  brandId: z.string().min(1, "Select a brand"),
+  supplierId: z.string().nullable().optional(),
+  billNumber: z.string().trim().min(1, "Supplier bill number is required").max(60),
+  reference: optionalText(80),
+  status: z.enum(PURCHASE_STATUSES).default("RECEIVED"),
+  currency: currencyEnum.default("INR"),
+  billDate: z.string().min(1),
+  dueDate: z.string().nullable().optional(),
+
+  supplierName: optionalText(160),
+  supplierCompany: optionalText(160),
+  supplierAddress: optionalText(500),
+  supplierEmail: optionalText(160),
+  supplierPhone: optionalText(60),
+  supplierTaxNumber: optionalText(60),
+  supplierStateCode: stateCodeField,
+  brandStateCode: stateCodeField,
+
+  taxMode: z.enum(["NONE", "SINGLE", "GST"]).default("GST"),
+  taxRate: z.coerce.number().min(0).max(100).default(0),
+  cgstRate: z.coerce.number().min(0).max(100).default(0),
+  sgstRate: z.coerce.number().min(0).max(100).default(0),
+  igstRate: z.coerce.number().min(0).max(100).default(0),
+
+  discountType: z.enum(["PERCENT", "FIXED"]).default("PERCENT"),
+  discountValue: z.coerce.number().min(0).max(1_000_000_000).default(0),
+
+  shippingAmount: z.coerce.number().min(0).max(1_000_000_000).default(0),
+  shippingDescription: optionalText(200),
+
+  amountPaid: z.coerce.number().min(0).max(1_000_000_000).default(0),
+  notes: optionalText(4000),
+
+  items: z.array(invoiceItemSchema).max(500).default([]),
+});
+
 export type InvoiceInput = z.infer<typeof invoiceSchema>;
+export type PurchaseInput = z.infer<typeof purchaseSchema>;
+export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
+export type SupplierInput = z.infer<typeof supplierSchema>;
+export type StockAdjustmentInput = z.infer<typeof stockAdjustmentSchema>;
 export type BrandInput = z.infer<typeof brandSchema>;
 export type BrandSettingsInput = z.infer<typeof brandSettingsSchema>;
 export type CustomerInput = z.infer<typeof customerSchema>;

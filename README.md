@@ -20,6 +20,34 @@ account), name, unit, rate, tax rate and HSN/SAC. On an invoice, typing a code o
 catalogue entry. Invoice lines keep their own copy of the code, description and rate, so
 editing or deleting a catalogue item never rewrites invoices already issued.
 
+## Purchases, suppliers and stock
+
+**Suppliers** hold the vendors you buy from, and **Purchases** records their bills against
+one of your brands. Purchase bills reuse the same item catalogue, taxes, discount and
+shipping arithmetic as invoices, and keep their own snapshot of the supplier so history
+stays stable when supplier details change later.
+
+Stock is derived, never a stored counter:
+
+```
+on hand = opening stock + purchases + adjustments - sales
+```
+
+Every document owns its ledger rows, which are rewritten inside the same transaction that
+saves it, so an edit, a re-save or a delete can never double-count. Draft and cancelled
+documents move nothing, and lines without a matching tracked item are billed but not
+tracked. **Stock** shows quantities, valuation, low-stock alerts, the full movement history
+and a form for manual corrections (damage, wastage, a physical count).
+
+## GST state codes
+
+Brands, customers, suppliers and purchase bills each carry an official GST state code
+(`29` Karnataka, `27` Maharashtra, `97` Other Territory, `99` Outside India). Matching
+codes are an intra-state supply (CGST + SGST); differing codes are inter-state (IGST). The
+invoice and purchase editors show which applies and offer to move the rate accordingly;
+codes are never guessed when missing. GSTIN entry suggests the state from its first two
+digits.
+
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript

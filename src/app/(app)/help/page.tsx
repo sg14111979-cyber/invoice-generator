@@ -20,26 +20,53 @@ const STEPS = [
     action: { href: "/items", label: "Go to Items" },
   },
   {
-    title: "4. Create an invoice",
+    title: "4. Save your suppliers",
+    body: "Open Suppliers and add the vendors you buy from, with their GSTIN and state. Each supplier shows how many bills you have entered, how much you have bought and how much you still owe them.",
+    action: { href: "/suppliers", label: "Go to Suppliers" },
+  },
+  {
+    title: "5. Enter what you buy",
+    body: "Click New purchase bill under Purchases, pick the supplier and type their bill number, then add the items you received. A bill marked Received adds those quantities to your stock; leave it as Draft while goods are still on the way.",
+    action: { href: "/purchases/new", label: "Enter a purchase bill" },
+  },
+  {
+    title: "6. Watch your stock",
+    body: "Stock shows what you hold: opening quantity, everything purchased, everything sold and any correction you made, plus the value of the goods on hand. Set a low stock level on an item and it turns red here when it needs reordering. Damage or a stock count? Record an adjustment at the bottom of the page.",
+    action: { href: "/stock", label: "Go to Stock" },
+  },
+  {
+    title: "7. Create an invoice",
     body: "Click New invoice. The invoice number, date and your business details are filled in for you. Pick a customer, then add a line for each product or service: description, quantity, rate. The preview on the right is exactly what your customer will receive.",
     action: { href: "/invoices/new", label: "Create an invoice" },
   },
   {
-    title: "5. Add tax, discount and shipping",
+    title: "8. Add tax, discount and shipping",
     body: "Choose No tax, one tax rate for the whole invoice, a different rate per line, or GST (CGST/SGST for the same state, IGST for another state). Discounts can be a percentage or a fixed amount. Add shipping if you charge it. The total updates as you type — there is nothing to calculate yourself.",
   },
   {
-    title: "6. Save, then send",
+    title: "9. Save, then send",
     body: "Your work is saved automatically as a draft while you type, and Save invoice stores it for good. Then use PDF to download a file you can email or WhatsApp, or Print for a paper copy. Change the status to Sent, and to Paid once the money arrives.",
   },
   {
-    title: "7. Keep track",
+    title: "10. Keep track",
     body: "Invoices lists everything you have made, with a search box and filters by customer, status and date. The Dashboard shows how much you have invoiced, how much has been paid and how much is still outstanding. Unpaid invoices past their due date are marked Overdue automatically.",
     action: { href: "/invoices", label: "See all invoices" },
   },
 ];
 
 const FAQS = [
+  {
+    q: "How does the app know whether to use CGST/SGST or IGST?",
+    a: "From the GST state codes. Pick your state on the brand and the state on the customer or supplier (for example 29 Karnataka, 27 Maharashtra). Same code means one state, so CGST + SGST; different codes mean an inter-state supply, so IGST. The invoice tells you which applies and offers to move the rate for you.",
+  },
+  {
+    q: "Which documents change my stock?",
+    a: "Purchase bills add stock and invoices remove it, but only once they leave Draft and are not Cancelled. Editing or deleting a document rewrites its own stock entries, so quantities can never drift. Lines you type by hand, without a saved item, are billed but not tracked.",
+  },
+  {
+    q: "Why is an item missing from Stock?",
+    a: "Only items with \u201cTrack stock\u201d turned on appear there \u2014 turn it off for services. Enter what you already hold as the opening stock on the item.",
+  },
   {
     q: "Can two items share a code?",
     a: "No \u2014 a code is your unique reference, so the app refuses a code that is already in use and tells you which item has it. Leave the code blank if you would rather search by name only.",

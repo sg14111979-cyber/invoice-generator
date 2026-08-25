@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InvoicePreview } from "@/components/invoice-preview";
 import { NumberField, SelectField, TextAreaField, TextField } from "@/components/field";
+import { StateField } from "@/components/state-field";
+import { round2 } from "@/lib/calc";
 import { CURRENCIES, CURRENCY_CODES, formatMoney } from "@/lib/currency";
 import { api, ApiError } from "@/lib/client";
 import { toDateInputValue } from "@/lib/format";
+import { stateLabel, supplyType, type SupplyType } from "@/lib/states";
 import {
   daysFromTerms,
   draftToPayload,
@@ -170,6 +173,7 @@ export function InvoiceEditor({
       fromWebsite: brand.fromWebsite,
       fromTaxNumber: brand.fromTaxNumber,
       fromRegistration: brand.fromRegistration,
+      fromStateCode: brand.fromStateCode,
       currency: settings?.currency ?? current.currency,
       template: (settings?.template ?? current.template) as InvoiceDraft["template"],
       taxMode: (settings?.gstEnabled
@@ -208,6 +212,7 @@ export function InvoiceEditor({
       toEmail: customer.email,
       toPhone: customer.phone,
       toTaxNumber: customer.taxNumber,
+      toStateCode: customer.stateCode,
     }));
   }
 
@@ -295,6 +300,24 @@ export function InvoiceEditor({
   }
 
   const isGst = draft.taxMode === "GST";
+  const supply = supplyType(draft.fromStateCode, draft.toStateCode);
+  const gstRate = round2(draft.cgstRate + draft.sgstRate + draft.igstRate);
+  // Intra-state GST is split in two halves; inter-state is a single IGST rate.
+  const gstSplitWrong =
+    isGst &&
+    gstRate > 0 &&
+    ((supply === "INTRA" && draft.igstRate > 0) ||
+      (supply === "INTER" && draft.cgstRate + draft.sgstRate > 0));
+
+  function applySupplyType(next: SupplyType) {
+    dirtyRef.current = true;
+    setDraft((current) => {
+      const total = round2(current.cgstRate + current.sgstRate + current.igstRate);
+      return next === "INTER"
+        ? { ...current, cgstRate: 0, sgstRate: 0, igstRate: total }
+        : { ...current, cgstRate: round2(total / 2), sgstRate: round2(total / 2), igstRate: 0 };
+    });
+  }
 
   const editor = (
     <div className="space-y-4">
@@ -407,6 +430,12 @@ export function InvoiceEditor({
             label="Tax number"
             value={draft.toTaxNumber}
             onChange={(value) => set("toTaxNumber", value)}
+          />
+          <StateField
+            label="Place of supply (state code)"
+            code={draft.toStateCode}
+            gstin={draft.toTaxNumber}
+            onChange={(code) => set("toStateCode", code)}
           />
           <TextAreaField
             label="Address"
@@ -525,6 +554,29 @@ export function InvoiceEditor({
 
       <section className="card p-4">
         <h2 className="text-sm font-semibold text-slate-900">Tax, discount &amp; shipping</h2>
+        {isGst ? (
+          <div className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            <p>
+              Your state{" "}
+              <strong>{stateLabel(draft.fromStateCode) || "not set on this brand"}</strong> →
+              place of supply{" "}
+              <strong>{stateLabel(draft.toStateCode) || "not set"}</strong>
+              {supply === "INTRA" ? " · same state, charge CGST + SGST" : null}
+              {supply === "INTER" ? " · different states, charge IGST" : null}
+            </p>
+            {gstSplitWrong ? (
+              <button
+                type="button"
+                className="mt-1 font-semibold text-navy-700 hover:underline"
+                onClick={() => applySupplyType(supply === "INTRA" ? "INTRA" : "INTER")}
+              >
+                {supply === "INTRA"
+                  ? `Split ${gstRate}% into CGST + SGST`
+                  : `Move ${gstRate}% to IGST`}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <SelectField
             label="Tax mode"

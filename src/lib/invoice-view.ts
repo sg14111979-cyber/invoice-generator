@@ -36,6 +36,7 @@ export interface InvoiceView {
   fromWebsite: string;
   fromTaxNumber: string;
   fromRegistration: string;
+  fromStateCode: string;
 
   toName: string;
   toCompany: string;
@@ -43,6 +44,7 @@ export interface InvoiceView {
   toEmail: string;
   toPhone: string;
   toTaxNumber: string;
+  toStateCode: string;
 
   items: InvoiceViewItem[];
 

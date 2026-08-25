@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { getActiveBrand } from "@/lib/brand";
 import { prisma } from "@/lib/db";
 import { itemSearchWhere } from "@/lib/items";
+import { stockLevels } from "@/lib/stock";
 import { ItemsManager } from "./items-manager";
 
 export const metadata = { title: "Items | Invoice Studio" };
@@ -16,10 +17,15 @@ export default async function ItemsPage({
   const query = (q ?? "").trim();
   const activeBrand = await getActiveBrand(user.id);
 
-  const items = await prisma.item.findMany({
-    where: itemSearchWhere(user.id, query),
-    orderBy: [{ code: "asc" }, { name: "asc" }],
-  });
+  const [items, levels] = await Promise.all([
+    prisma.item.findMany({
+      where: itemSearchWhere(user.id, query),
+      orderBy: [{ code: "asc" }, { name: "asc" }],
+    }),
+    stockLevels(user.id),
+  ]);
+
+  const byItem = new Map(levels.map((level) => [level.itemId, level]));
 
   return (
     <div className="space-y-6">
@@ -41,9 +47,15 @@ export default async function ItemsPage({
           description: item.description,
           unit: item.unit,
           rate: item.rate,
+          purchaseRate: item.purchaseRate,
           taxRate: item.taxRate,
           hsnCode: item.hsnCode,
           notes: item.notes,
+          trackStock: item.trackStock,
+          openingStock: item.openingStock,
+          lowStockLevel: item.lowStockLevel,
+          onHand: byItem.get(item.id)?.onHand ?? 0,
+          lowStock: byItem.get(item.id)?.lowStock ?? false,
         }))}
       />
     </div>

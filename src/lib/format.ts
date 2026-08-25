@@ -30,6 +30,7 @@ export function formatDisplayDate(date: Date | string | null | undefined): strin
 export const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
   SENT: "Sent",
+  RECEIVED: "Received",
   PARTIALLY_PAID: "Partially Paid",
   PAID: "Paid",
   OVERDUE: "Overdue",
@@ -39,6 +40,7 @@ export const STATUS_LABELS: Record<string, string> = {
 export const STATUS_CLASSES: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-700 ring-slate-200",
   SENT: "bg-blue-50 text-blue-700 ring-blue-200",
+  RECEIVED: "bg-blue-50 text-blue-700 ring-blue-200",
   PARTIALLY_PAID: "bg-amber-50 text-amber-700 ring-amber-200",
   PAID: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   OVERDUE: "bg-red-50 text-red-700 ring-red-200",

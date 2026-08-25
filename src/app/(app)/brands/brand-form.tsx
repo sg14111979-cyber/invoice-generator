@@ -10,6 +10,7 @@ import {
   TextAreaField,
   TextField,
 } from "@/components/field";
+import { StateField } from "@/components/state-field";
 import { api, ApiError, upload } from "@/lib/client";
 import { CURRENCY_CODES, CURRENCIES } from "@/lib/currency";
 
@@ -21,6 +22,7 @@ export interface BrandFormValues {
   addressLine2: string;
   city: string;
   state: string;
+  stateCode: string;
   postalCode: string;
   country: string;
   phone: string;
@@ -64,6 +66,7 @@ const EMPTY_BRAND: BrandFormValues = {
   addressLine2: "",
   city: "",
   state: "",
+  stateCode: "",
   postalCode: "",
   country: "",
   phone: "",
@@ -140,6 +143,7 @@ export function BrandForm({
     addressLine2: values.addressLine2,
     city: values.city,
     state: values.state,
+    stateCode: values.stateCode,
     postalCode: values.postalCode,
     country: values.country,
     phone: values.phone,
@@ -258,6 +262,17 @@ export function BrandForm({
           />
           <TextField label="City" value={values.city} onChange={(value) => set("city", value)} />
           <TextField label="State" value={values.state} onChange={(value) => set("state", value)} />
+          <StateField
+            code={values.stateCode}
+            gstin={values.taxNumber}
+            onChange={(code, name) =>
+              setValues((current) => ({
+                ...current,
+                stateCode: code,
+                state: name || current.state,
+              }))
+            }
+          />
           <TextField
             label="Postal code"
             value={values.postalCode}

@@ -48,6 +48,7 @@ interface NumberFieldProps {
   step?: number;
   className?: string;
   suffix?: string;
+  hint?: string;
 }
 
 export function NumberField({
@@ -59,6 +60,7 @@ export function NumberField({
   step = 1,
   className,
   suffix,
+  hint,
 }: NumberFieldProps) {
   return (
     <label className={`block ${className ?? ""}`}>
@@ -67,6 +69,7 @@ export function NumberField({
         {suffix ? <span className="ml-1 normal-case text-slate-400">{suffix}</span> : null}
       </span>
       <NumberInput value={value} onChange={onChange} min={min} max={max} step={step} />
+      {hint ? <span className="mt-1 block text-xs text-slate-500">{hint}</span> : null}
     </label>
   );
 }
@@ -190,20 +193,25 @@ export function CheckboxField({
   label,
   checked,
   onChange,
+  hint,
 }: {
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;
+  hint?: string;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-      <input
-        type="checkbox"
-        className="h-4 w-4 rounded border-slate-300 text-navy-700 focus:ring-navy-500"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      {label}
-    </label>
+    <div>
+      <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-slate-300 text-navy-700 focus:ring-navy-500"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        {label}
+      </label>
+      {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+    </div>
   );
 }

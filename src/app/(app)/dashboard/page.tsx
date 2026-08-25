@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/currency";
 import { formatDisplayDate, STATUS_CLASSES, STATUS_LABELS } from "@/lib/format";
 import { markOverdueInvoices } from "@/lib/invoices";
 import { getDashboardStats } from "@/lib/stats";
+import { stockLevels, summariseStock } from "@/lib/stock";
 
 export const metadata = { title: "Dashboard | Invoice Studio" };
 
@@ -15,7 +16,7 @@ export default async function DashboardPage() {
   const activeBrand = await getActiveBrand(user.id);
   const currency = activeBrand?.settings?.currency ?? "INR";
 
-  const [stats, recentInvoices, recentCustomers] = await Promise.all([
+  const [stats, recentInvoices, recentCustomers, purchaseTotals, levels] = await Promise.all([
     getDashboardStats(user.id, activeBrand?.id ?? null),
     prisma.invoice.findMany({
       where: { userId: user.id, ...(activeBrand ? { brandId: activeBrand.id } : {}) },
@@ -29,7 +30,19 @@ export default async function DashboardPage() {
       take: 5,
       select: { id: true, name: true, companyName: true, email: true },
     }),
+    prisma.purchase.aggregate({
+      where: {
+        userId: user.id,
+        status: { not: "CANCELLED" },
+        ...(activeBrand ? { brandId: activeBrand.id } : {}),
+      },
+      _sum: { total: true, balanceDue: true },
+      _count: true,
+    }),
+    stockLevels(user.id),
   ]);
+
+  const stock = summariseStock(levels);
 
   const countCards = [
     { label: "Total invoices", value: stats.total },
@@ -43,6 +56,27 @@ export default async function DashboardPage() {
     { label: "Total invoiced", value: stats.totalInvoiced },
     { label: "Total paid", value: stats.totalPaid },
     { label: "Outstanding", value: stats.outstanding },
+  ];
+
+  const purchaseCards = [
+    { label: "Purchase bills", value: String(purchaseTotals._count), href: "/purchases" },
+    {
+      label: "Purchased value",
+      value: formatMoney(purchaseTotals._sum.total ?? 0, currency),
+      href: "/purchases",
+    },
+    {
+      label: "Payable to suppliers",
+      value: formatMoney(purchaseTotals._sum.balanceDue ?? 0, currency),
+      href: "/purchases",
+    },
+    { label: "Stock value", value: formatMoney(stock.stockValue, currency), href: "/stock" },
+    {
+      label: "Low stock items",
+      value: String(stock.lowStockCount),
+      href: "/stock?low=1",
+      danger: stock.lowStockCount > 0,
+    },
   ];
 
   return (
@@ -117,6 +151,23 @@ export default async function DashboardPage() {
         ))}
       </section>
 
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {purchaseCards.map((card) => (
+          <Link key={card.label} href={card.href} className="card p-4 hover:bg-slate-50">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {card.label}
+            </p>
+            <p
+              className={`mt-2 text-lg font-semibold ${
+                card.danger ? "text-red-600" : "text-slate-900"
+              }`}
+            >
+              {card.value}
+            </p>
+          </Link>
+        ))}
+      </section>
+
       <section className="card p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Quick actions
@@ -125,8 +176,17 @@ export default async function DashboardPage() {
           <Link className="btn-primary" href="/invoices/new">
             + New invoice
           </Link>
+          <Link className="btn-primary" href="/purchases/new">
+            + New purchase bill
+          </Link>
           <Link className="btn-secondary" href="/customers">
             Customers
+          </Link>
+          <Link className="btn-secondary" href="/suppliers">
+            Suppliers
+          </Link>
+          <Link className="btn-secondary" href="/stock">
+            Stock
           </Link>
           <Link className="btn-secondary" href="/brands">
             Brands

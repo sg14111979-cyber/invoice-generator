@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { fromDateInputValue } from "@/lib/format";
 import { buildInvoiceView, type InvoiceView } from "@/lib/invoice-view";
 import type { InvoiceInput } from "@/lib/schemas";
+import { syncInvoiceStock } from "@/lib/stock";
 import type { Invoice, InvoiceItem, Prisma } from "@prisma/client";
 
 export type InvoiceWithItems = Invoice & { items: InvoiceItem[] };
@@ -61,6 +62,9 @@ function invoiceScalarData(input: InvoiceInput, logoPath: string | null) {
       toPhone: input.toPhone,
       toTaxNumber: input.toTaxNumber,
 
+      fromStateCode: input.fromStateCode,
+      toStateCode: input.toStateCode,
+
       taxMode: input.taxMode,
       taxRate: input.taxRate,
       cgstRate: input.cgstRate,
@@ -101,6 +105,7 @@ function invoiceScalarData(input: InvoiceInput, logoPath: string | null) {
 function itemRows(input: InvoiceInput, totals: ReturnType<typeof totalsFor>) {
   return input.items.map((item, index) => ({
     position: index,
+    itemId: item.itemId || null,
     code: item.code,
     description: item.description,
     quantity: item.quantity,
@@ -112,22 +117,44 @@ function itemRows(input: InvoiceInput, totals: ReturnType<typeof totalsFor>) {
   }));
 }
 
+function stockLines(input: InvoiceInput) {
+  return input.items.map((item) => ({
+    itemId: item.itemId ?? null,
+    code: item.code,
+    quantity: item.quantity,
+    rate: item.rate,
+  }));
+}
+
 export async function createInvoice(userId: string, input: InvoiceInput, logoPath: string | null) {
   const { data, totals } = invoiceScalarData(input, logoPath);
-  return prisma.invoice.create({
-    data: {
-      ...data,
+  return prisma.$transaction(async (tx) => {
+    const invoice = await tx.invoice.create({
+      data: {
+        ...data,
+        userId,
+        brandId: input.brandId,
+        customerId: input.customerId || null,
+        items: { create: itemRows(input, totals) },
+      },
+      include: invoiceInclude,
+    });
+
+    await syncInvoiceStock(
+      tx,
       userId,
-      brandId: input.brandId,
-      customerId: input.customerId || null,
-      items: { create: itemRows(input, totals) },
-    },
-    include: invoiceInclude,
+      invoice.id,
+      invoice.status,
+      invoice.issueDate,
+      stockLines(input),
+    );
+    return invoice;
   });
 }
 
 /** Replaces the item list wholesale: simplest correct behaviour for a form save. */
 export async function updateInvoice(
+  userId: string,
   invoiceId: string,
   input: InvoiceInput,
   logoPath: string | null,
@@ -135,7 +162,7 @@ export async function updateInvoice(
   const { data, totals } = invoiceScalarData(input, logoPath);
   return prisma.$transaction(async (tx) => {
     await tx.invoiceItem.deleteMany({ where: { invoiceId } });
-    return tx.invoice.update({
+    const invoice = await tx.invoice.update({
       where: { id: invoiceId },
       data: {
         ...data,
@@ -145,6 +172,16 @@ export async function updateInvoice(
       },
       include: invoiceInclude,
     });
+
+    await syncInvoiceStock(
+      tx,
+      userId,
+      invoice.id,
+      invoice.status,
+      invoice.issueDate,
+      stockLines(input),
+    );
+    return invoice;
   });
 }
 
@@ -175,6 +212,9 @@ export function invoiceToView(invoice: InvoiceWithItems): InvoiceView {
     toEmail: invoice.toEmail,
     toPhone: invoice.toPhone,
     toTaxNumber: invoice.toTaxNumber,
+
+    fromStateCode: invoice.fromStateCode,
+    toStateCode: invoice.toStateCode,
 
     items: invoice.items.map((item) => ({
       code: item.code,

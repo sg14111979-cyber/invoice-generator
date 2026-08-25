@@ -42,7 +42,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
     // Keep the original logo snapshot unless the brand changed.
     const logoPath = existing.brandId === input.brandId ? existing.fromLogoPath : brand.logoPath;
-    const invoice = await updateInvoice(id, input, logoPath);
+    const invoice = await updateInvoice(user.id, id, input, logoPath);
     return { id: invoice.id, invoiceNumber: invoice.invoiceNumber };
   });
 }

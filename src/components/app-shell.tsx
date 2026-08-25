@@ -12,8 +12,11 @@ import {
   InvoiceIcon,
   ItemsIcon,
   MenuIcon,
+  PurchaseIcon,
   SettingsIcon,
   ShieldIcon,
+  StockIcon,
+  SupplierIcon,
   UsersIcon,
 } from "@/components/icons";
 
@@ -35,11 +38,17 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", Icon: DashboardIcon },
   { href: "/invoices", label: "Invoices", Icon: InvoiceIcon },
   { href: "/customers", label: "Customers", Icon: UsersIcon },
+  { href: "/purchases", label: "Purchases", Icon: PurchaseIcon },
+  { href: "/suppliers", label: "Suppliers", Icon: SupplierIcon },
   { href: "/items", label: "Items", Icon: ItemsIcon },
+  { href: "/stock", label: "Stock", Icon: StockIcon },
   { href: "/brands", label: "Brands", Icon: BrandIcon },
   { href: "/settings", label: "Settings", Icon: SettingsIcon },
   { href: "/help", label: "How to use", Icon: HelpIcon },
 ];
+
+const MOBILE_NAV_HREFS = ["/dashboard", "/invoices", "/purchases", "/customers", "/stock"];
+const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) => MOBILE_NAV_HREFS.includes(item.href));
 
 export function AppShell({ user, brands, activeBrandId, children }: AppShellProps) {
   const pathname = usePathname();
@@ -174,8 +183,8 @@ export function AppShell({ user, brands, activeBrandId, children }: AppShellProp
 
         <main className="flex-1 px-4 py-6 lg:px-8">{children}</main>
 
-        <nav className="no-print sticky bottom-0 z-30 grid grid-cols-6 border-t border-slate-200 bg-white sm:hidden">
-          {NAV_ITEMS.map(({ href, label, Icon }) => (
+        <nav className="no-print sticky bottom-0 z-30 grid grid-cols-5 border-t border-slate-200 bg-white sm:hidden">
+          {MOBILE_NAV_ITEMS.map(({ href, label, Icon }) => (
             <Link
               key={href}
               href={href}
