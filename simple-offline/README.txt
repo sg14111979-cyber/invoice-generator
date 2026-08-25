@@ -19,11 +19,20 @@ FIRST TIME (2 minutes)
    you can also type customer details straight onto an invoice).
 3. Open the "Make invoice" tab.
 
+SAVED ITEMS (your product/service list)
+---------------------------------------
+Open the "Items" tab and save each thing you sell once: your own code (for
+example A4-COPY-80), the name and the rate. On an invoice, type that code or
+name in the "Code" box of a line and the description and rate fill themselves
+in, so the same item is billed the same way to every customer. Typed a line by
+hand? Press "Save" on that line to add it to the list. Codes must be unique.
+Changing an item later never changes invoices you already saved.
+
 MAKING AN INVOICE
 -----------------
 - Pick a customer (or type the name and address).
-- Add one line per item: description, quantity, rate. Totals update live on
-  the preview on the right.
+- Add one line per item: code (optional), description, quantity, rate. Totals
+  update live on the preview on the right.
 - Choose the tax: "No tax", "One tax rate", or "GST" (same state gives
   CGST + SGST, other state gives IGST).
 - Add discount, shipping and amount paid if needed. Balance due is calculated.

@@ -12,6 +12,14 @@ created, viewed or downloaded.
   storage on that one computer, with JSON backup/restore. Meant for one person
   invoicing from one machine; see `simple-offline/README.txt`.
 
+## Item catalogue
+
+Products and services are saved once under **Items** with an optional code (unique per
+account), name, unit, rate, tax rate and HSN/SAC. On an invoice, typing a code or name in
+"Pick a saved item" fills the line in, and "Save as item" turns a hand-typed line into a
+catalogue entry. Invoice lines keep their own copy of the code, description and rate, so
+editing or deleting a catalogue item never rewrites invoices already issued.
+
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript
