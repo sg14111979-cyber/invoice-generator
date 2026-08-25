@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
-    "@react-pdf/renderer": "^4.1.6",
+    "@react-pdf/renderer": "^4.6.1",
     "bcryptjs": "^2.4.3",
     "next": "^15.5.4",
     "qrcode": "^1.5.4",
