@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Invoice Studio
 
-## Getting Started
+Secure, multi-brand invoice generator. Sign-in is required before any invoice can be
+created, viewed or downloaded.
 
-First, run the development server:
+## Two editions
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Full web app** (this repository, below): accounts and passwords, per-user data
+  isolation, admin users, shared database. Needs Node.js 20+.
+- **Simple offline edition** (`simple-offline/`): a single HTML file you double-click.
+  No install, no Node.js, no server, no login — data lives in that browser's local
+  storage on that one computer, with JSON backup/restore. Meant for one person
+  invoicing from one machine; see `simple-offline/README.txt`.
+
+## Item catalogue
+
+Products and services are saved once under **Items** with an optional code (unique per
+account), name, unit, rate, tax rate and HSN/SAC. On an invoice, typing a code or name in
+"Pick a saved item" fills the line in, and "Save as item" turns a hand-typed line into a
+catalogue entry. Invoice lines keep their own copy of the code, description and rate, so
+editing or deleting a catalogue item never rewrites invoices already issued.
+
+## Purchases, suppliers and stock
+
+**Suppliers** hold the vendors you buy from, and **Purchases** records their bills against
+one of your brands. Purchase bills reuse the same item catalogue, taxes, discount and
+shipping arithmetic as invoices, and keep their own snapshot of the supplier so history
+stays stable when supplier details change later.
+
+Stock is derived, never a stored counter:
+
+```
+on hand = opening stock + purchases + adjustments - sales
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Every document owns its ledger rows, which are rewritten inside the same transaction that
+saves it, so an edit, a re-save or a delete can never double-count. Draft and cancelled
+documents move nothing, and lines without a matching tracked item are billed but not
+tracked. **Stock** shows quantities, valuation, low-stock alerts, the full movement history
+and a form for manual corrections (damage, wastage, a physical count).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## GST state codes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Brands, customers, suppliers and purchase bills each carry an official GST state code
+(`29` Karnataka, `27` Maharashtra, `97` Other Territory, `99` Outside India). Matching
+codes are an intra-state supply (CGST + SGST); differing codes are inter-state (IGST). The
+invoice and purchase editors show which applies and offer to move the rate accordingly;
+codes are never guessed when missing. GSTIN entry suggests the state from its first two
+digits.
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js 15 (App Router) + TypeScript
+- Tailwind CSS
+- Prisma ORM + SQLite (swappable for Postgres/MySQL)
+- Database-backed sessions with bcrypt password hashing
+- `@react-pdf/renderer` for A4 PDF export
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Getting started (no terminal needed)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Install Node.js 20+ from [nodejs.org](https://nodejs.org), then double-click:
 
-## Deploy on Vercel
+- **Windows:** `Start Invoice Studio.bat`
+- **macOS / Linux:** `Start Invoice Studio.command` (first time on macOS: right-click → Open)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+It installs everything, starts the app and opens the browser. The first screen asks for
+your name, business name, email and password and creates your owner account — no files
+to edit. After that, sign in at http://localhost:3000.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Getting started (terminal)
+
+```bash
+npm run app     # setup + build + start + open browser (same as double-clicking)
+# or, for development:
+npm run setup
+npm run dev
+```
+
+Setup writes a git-ignored `.env` with a random `SESSION_SECRET`; if `.env`
+already exists it is left untouched. To do it manually instead:
+
+```bash
+cp .env.example .env      # then edit the values
+npm install
+npm run db:migrate
+npm run db:seed
+```
+
+## Environment variables
+
+| Variable         | Purpose                                              |
+| ---------------- | ---------------------------------------------------- |
+| `DATABASE_URL`   | Prisma connection string (default: local SQLite file) |
+| `SESSION_SECRET` | Secret used for session handling (any long random string) |
+| `ADMIN_EMAIL`    | Optional: pre-create the administrator instead of using the setup screen |
+| `ADMIN_PASSWORD` | Optional: administrator password (min 8 chars)        |
+| `ADMIN_NAME`     | Optional: administrator display name                  |
+
+If `ADMIN_EMAIL`/`ADMIN_PASSWORD` are unset, the first visit shows a `/setup` screen that
+creates the owner account in the browser. Administrator credentials are only ever read
+from the environment; they are never committed to source or exposed to the browser.
+
+## Scripts
+
+| Script               | Description                        |
+| -------------------- | ---------------------------------- |
+| `npm run setup`      | One-command first-time setup       |
+| `npm run app`        | Setup, build, start and open the browser |
+| `npm run dev`        | Start the dev server               |
+| `npm run build`      | Production build                   |
+| `npm run lint`       | ESLint                             |
+| `npm run typecheck`  | TypeScript, no emit                |
+| `npm run db:migrate` | Apply migrations in development    |
+| `npm run db:deploy`  | Apply migrations in production     |
+| `npm run db:seed`    | Seed administrator + sample brand (skipped if admin env vars are unset) |
+
+## Security model
+
+- Passwords are hashed with bcrypt (cost 12); plain text is never stored.
+- Sessions are random 256-bit tokens, stored only as SHA-256 hashes, in httpOnly cookies.
+- Every query is scoped by `userId`, so one account can never read another's data.
+- Mutating API routes require a double-submit CSRF token.
+- Uploads are validated by type, size and re-encoded filename before storage.

@@ -1,0 +1,427 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         String    @default("USER")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions     Session[]
+  brands       Brand[]
+  customers    Customer[]
+  suppliers    Supplier[]
+  items        Item[]
+  invoices     Invoice[]
+  purchases    Purchase[]
+  movements    StockMovement[]
+  settings     UserSettings?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserSettings {
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  defaultCurrency     String  @default("INR")
+  defaultPaymentTerms String  @default("Net 15")
+  defaultNotes        String  @default("")
+  defaultFooter       String  @default("Thank you for your business.")
+  paperSize           String  @default("A4")
+  logoPosition        String  @default("left")
+  fontSize            String  @default("normal")
+  defaultTemplate     String  @default("modern")
+
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Brand {
+  id                  String     @id @default(cuid())
+  userId              String
+  name                String
+  logoPath            String?
+  addressLine1        String     @default("")
+  addressLine2        String     @default("")
+  city                String     @default("")
+  state               String     @default("")
+  stateCode           String     @default("")
+  postalCode          String     @default("")
+  country             String     @default("")
+  phone               String     @default("")
+  email               String     @default("")
+  website             String     @default("")
+  taxNumber           String     @default("")
+  registrationNumber  String     @default("")
+  isDefault           Boolean    @default(false)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settings            BrandSettings?
+  invoices            Invoice[]
+  purchases           Purchase[]
+
+  @@index([userId])
+}
+
+model BrandSettings {
+  id                  String  @id @default(cuid())
+  brandId             String  @unique
+  invoicePrefix       String  @default("INV")
+  numberFormat        String  @default("{PREFIX}-{NUMBER}")
+  nextNumber          Int     @default(1)
+  numberPadding       Int     @default(5)
+  currency            String  @default("INR")
+  taxMode             String  @default("SINGLE")
+  defaultTaxRate      Float   @default(0)
+  gstEnabled          Boolean @default(false)
+  cgstRate            Float   @default(0)
+  sgstRate            Float   @default(0)
+  igstRate            Float   @default(0)
+  paymentTerms        String  @default("Net 15")
+  defaultNotes        String  @default("")
+  defaultTerms        String  @default("")
+  defaultFooter       String  @default("Thank you for your business.")
+  template            String  @default("modern")
+  bankName            String  @default("")
+  accountName         String  @default("")
+  accountNumber       String  @default("")
+  ifsc                String  @default("")
+  swift               String  @default("")
+  upiId               String  @default("")
+  paymentLink         String  @default("")
+  paymentInstructions String  @default("")
+
+  brand               Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id           String    @id @default(cuid())
+  userId       String
+  name         String
+  companyName  String    @default("")
+  addressLine1 String    @default("")
+  addressLine2 String    @default("")
+  city         String    @default("")
+  state        String    @default("")
+  stateCode    String    @default("")
+  country      String    @default("")
+  postalCode   String    @default("")
+  email        String    @default("")
+  phone        String    @default("")
+  taxNumber    String    @default("")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices     Invoice[]
+
+  @@index([userId])
+}
+
+/// Who you buy from. Mirrors Customer, and its state code drives purchase GST.
+model Supplier {
+  id           String     @id @default(cuid())
+  userId       String
+  name         String
+  companyName  String     @default("")
+  addressLine1 String     @default("")
+  addressLine2 String     @default("")
+  city         String     @default("")
+  state        String     @default("")
+  stateCode    String     @default("")
+  country      String     @default("")
+  postalCode   String     @default("")
+  email        String     @default("")
+  phone        String     @default("")
+  taxNumber    String     @default("")
+  notes        String     @default("")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchases    Purchase[]
+
+  @@index([userId])
+}
+
+/// Reusable catalogue entry: saved once, then pulled onto any invoice by code or name.
+model Item {
+  id          String   @id @default(cuid())
+  userId      String
+  code        String?
+  name        String
+  description String   @default("")
+  unit        String   @default("")
+  rate        Float    @default(0)
+  taxRate     Float    @default(0)
+  hsnCode     String   @default("")
+  notes       String   @default("")
+
+  // Inventory. Stock on hand is opening stock plus the signed movement ledger.
+  trackStock    Boolean @default(true)
+  openingStock  Float   @default(0)
+  lowStockLevel Float   @default(0)
+  purchaseRate  Float   @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoiceItems  InvoiceItem[]
+  purchaseItems PurchaseItem[]
+  movements     StockMovement[]
+
+  // NULL codes repeat freely, so a code stays optional but unique once used.
+  @@unique([userId, code])
+  @@index([userId])
+}
+
+model Invoice {
+  id                  String        @id @default(cuid())
+  userId              String
+  brandId             String
+  customerId          String?
+
+  invoiceNumber       String
+  status              String        @default("DRAFT")
+  template            String        @default("modern")
+  currency            String        @default("INR")
+  issueDate           DateTime      @default(now())
+  dueDate             DateTime?
+  paymentTerms        String        @default("")
+  poNumber            String        @default("")
+
+  // Snapshot of brand ("from") details so later brand edits do not rewrite history.
+  fromName            String        @default("")
+  fromAddress         String        @default("")
+  fromPhone           String        @default("")
+  fromEmail           String        @default("")
+  fromWebsite         String        @default("")
+  fromTaxNumber       String        @default("")
+  fromRegistration    String        @default("")
+  fromLogoPath        String?
+
+  // Snapshot of customer ("bill to") details.
+  toName              String        @default("")
+  toCompany           String        @default("")
+  toAddress           String        @default("")
+  toEmail             String        @default("")
+  toPhone             String        @default("")
+  toTaxNumber         String        @default("")
+
+  // GST state codes decide CGST+SGST versus IGST; snapshotted like the addresses.
+  fromStateCode       String        @default("")
+  toStateCode         String        @default("")
+
+  taxMode             String        @default("SINGLE")
+  taxRate             Float         @default(0)
+  cgstRate            Float         @default(0)
+  sgstRate            Float         @default(0)
+  igstRate            Float         @default(0)
+
+  discountType        String        @default("PERCENT")
+  discountValue       Float         @default(0)
+
+  shippingAmount      Float         @default(0)
+  shippingDescription String        @default("")
+
+  amountPaid          Float         @default(0)
+
+  notes               String        @default("")
+  terms               String        @default("")
+  footer              String        @default("")
+
+  bankName            String        @default("")
+  accountName         String        @default("")
+  accountNumber       String        @default("")
+  ifsc                String        @default("")
+  swift               String        @default("")
+  upiId               String        @default("")
+  paymentLink         String        @default("")
+  paymentInstructions String        @default("")
+
+  subtotal            Float         @default(0)
+  discountAmount      Float         @default(0)
+  taxableAmount       Float         @default(0)
+  taxAmount           Float         @default(0)
+  total               Float         @default(0)
+  balanceDue          Float         @default(0)
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand               Brand         @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  customer            Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items               InvoiceItem[]
+  payments            Payment[]
+  movements           StockMovement[]
+
+  @@unique([userId, invoiceNumber])
+  @@index([userId])
+  @@index([brandId])
+  @@index([customerId])
+}
+
+model InvoiceItem {
+  id           String  @id @default(cuid())
+  invoiceId    String
+  itemId       String?
+  position     Int     @default(0)
+  code         String  @default("")
+  description  String  @default("")
+  quantity     Float   @default(1)
+  unit         String  @default("")
+  rate         Float   @default(0)
+  taxRate      Float   @default(0)
+  discountRate Float   @default(0)
+  amount       Float   @default(0)
+
+  invoice      Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  item         Item?   @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@index([itemId])
+}
+
+/// A supplier bill. Saving one adds stock; the totals reuse the invoice maths.
+model Purchase {
+  id                  String   @id @default(cuid())
+  userId              String
+  brandId             String
+  supplierId          String?
+
+  billNumber          String
+  reference           String   @default("")
+  status              String   @default("RECEIVED")
+  currency            String   @default("INR")
+  billDate            DateTime @default(now())
+  dueDate             DateTime?
+
+  // Snapshot of supplier details so later edits do not rewrite history.
+  supplierName        String   @default("")
+  supplierCompany     String   @default("")
+  supplierAddress     String   @default("")
+  supplierEmail       String   @default("")
+  supplierPhone       String   @default("")
+  supplierTaxNumber   String   @default("")
+  supplierStateCode   String   @default("")
+  brandStateCode      String   @default("")
+
+  taxMode             String   @default("GST")
+  taxRate             Float    @default(0)
+  cgstRate            Float    @default(0)
+  sgstRate            Float    @default(0)
+  igstRate            Float    @default(0)
+
+  discountType        String   @default("PERCENT")
+  discountValue       Float    @default(0)
+
+  shippingAmount      Float    @default(0)
+  shippingDescription String   @default("")
+
+  amountPaid          Float    @default(0)
+  notes              String   @default("")
+
+  subtotal            Float    @default(0)
+  discountAmount      Float    @default(0)
+  taxableAmount       Float    @default(0)
+  taxAmount           Float    @default(0)
+  total               Float    @default(0)
+  balanceDue          Float    @default(0)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand               Brand           @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  supplier            Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  items               PurchaseItem[]
+  movements           StockMovement[]
+
+  @@index([userId])
+  @@index([brandId])
+  @@index([supplierId])
+}
+
+model PurchaseItem {
+  id           String   @id @default(cuid())
+  purchaseId   String
+  itemId       String?
+  position     Int      @default(0)
+  code         String   @default("")
+  description  String   @default("")
+  quantity     Float    @default(1)
+  unit         String   @default("")
+  rate         Float    @default(0)
+  taxRate      Float    @default(0)
+  discountRate Float    @default(0)
+  amount       Float    @default(0)
+
+  purchase     Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  item         Item?    @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseId])
+  @@index([itemId])
+}
+
+/// Signed stock ledger: purchases add, invoices subtract, adjustments do either.
+/// Rows are rewritten inside the same transaction that saves their document, so
+/// on-hand quantities can never drift from the paperwork.
+model StockMovement {
+  id         String   @id @default(cuid())
+  userId     String
+  itemId     String
+  invoiceId  String?
+  purchaseId String?
+  source     String   @default("ADJUSTMENT")
+  quantity   Float    @default(0)
+  unitCost   Float    @default(0)
+  note       String   @default("")
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item       Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  invoice    Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  purchase   Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([itemId])
+  @@index([invoiceId])
+  @@index([purchaseId])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  invoiceId String
+  amount    Float
+  paidAt    DateTime @default(now())
+  method    String   @default("")
+  reference String   @default("")
+  note      String   @default("")
+
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}

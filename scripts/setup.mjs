@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+/**
+ * Prepares the app: writes a local .env if missing, installs dependencies and
+ * applies database migrations. Safe to run repeatedly. Used by `npm run setup`
+ * and by the double-click launchers via start.mjs.
+ */
+import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { existsSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+// Always work from the project folder, whatever directory the launcher was run from.
+process.chdir(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
+
+export const isWindows = process.platform === "win32";
+const npm = isWindows ? "npm.cmd" : "npm";
+const npx = isWindows ? "npx.cmd" : "npx";
+
+// npm/npx are .cmd shims on Windows, which Node refuses to spawn without a shell.
+export const shellForPlatform = isWindows;
+
+export function run(command, args) {
+  console.log(`\n> ${command} ${args.join(" ")}`);
+  const result = spawnSync(command, args, { stdio: "inherit", shell: shellForPlatform });
+  if (result.error?.code === "ENOENT") {
+    console.error(
+      `\nCould not find ${command}. Install Node.js 20 or newer from https://nodejs.org,` +
+        " then try again.",
+    );
+    process.exit(1);
+  }
+  if (result.status !== 0) {
+    console.error(`\nFailed: ${command} ${args.join(" ")}`);
+    console.error("Scroll up for the reason. An internet connection is needed the first time.");
+    process.exit(result.status ?? 1);
+  }
+}
+
+export function ensureEnv() {
+  if (existsSync(".env")) return;
+  writeFileSync(
+    ".env",
+    [
+      "# Local configuration. Keep this file private; it is not committed to git.",
+      'DATABASE_URL="file:./dev.db"',
+      `SESSION_SECRET="${randomBytes(32).toString("hex")}"`,
+      "",
+      "# Optional: pre-create the owner account instead of using the setup screen.",
+      '# ADMIN_EMAIL="you@yourbusiness.com"',
+      '# ADMIN_PASSWORD="at-least-8-characters"',
+      '# ADMIN_NAME="Your Name"',
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  console.log("Created .env with a fresh session secret.");
+}
+
+export function prepare() {
+  ensureEnv();
+  run(npm, ["install"]);
+  run(npx, ["prisma", "migrate", "deploy"]);
+  run(npm, ["run", "db:seed"]);
+}
+
+// Only prepare when executed directly (start.mjs imports and reuses these).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  prepare();
+  console.log("\nReady. Start the app with:  npm run dev\n");
+}
