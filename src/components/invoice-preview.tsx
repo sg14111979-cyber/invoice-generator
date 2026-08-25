@@ -180,6 +180,11 @@ export function InvoicePreview({ view }: { view: InvoiceView }) {
                 <tr key={index} className="border-b border-slate-200 align-top">
                   <td className="px-3 py-2.5 text-slate-800">
                     {item.description || <span className="text-slate-400">Item</span>}
+                    {item.code ? (
+                      <span className="mt-0.5 block font-mono text-[10px] uppercase text-slate-500">
+                        {item.code}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2.5 text-right text-slate-700">{item.quantity}</td>
                   <td className="px-3 py-2.5 text-slate-700">{item.unit || "\u2014"}</td>

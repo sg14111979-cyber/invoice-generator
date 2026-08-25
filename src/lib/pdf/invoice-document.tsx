@@ -171,7 +171,10 @@ export function InvoiceDocument({ view, logo }: { view: InvoiceView; logo: PdfLo
 
         {view.items.map((item, index) => (
           <View key={index} style={styles.tableRow} wrap={false}>
-            <Text style={COLUMNS.description}>{item.description || "Item"}</Text>
+            <Text style={COLUMNS.description}>
+              {item.code ? `[${item.code}] ` : ""}
+              {item.description || "Item"}
+            </Text>
             <Text style={COLUMNS.qty}>{item.quantity}</Text>
             <Text style={COLUMNS.unit}>{item.unit || "\u2014"}</Text>
             <Text style={COLUMNS.rate}>{formatMoney(item.rate, view.currency)}</Text>

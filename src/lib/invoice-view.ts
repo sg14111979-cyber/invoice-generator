@@ -4,6 +4,7 @@ import { joinAddress } from "@/lib/format";
 export type TemplateName = "modern" | "corporate" | "classic";
 
 export interface InvoiceViewItem {
+  code: string;
   description: string;
   quantity: number;
   unit: string;

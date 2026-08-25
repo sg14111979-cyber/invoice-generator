@@ -2,7 +2,12 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { listBrands } from "@/lib/brand";
 import { prisma } from "@/lib/db";
-import { draftFromInvoice, toBrandOption, toCustomerOption } from "@/lib/invoice-draft";
+import {
+  draftFromInvoice,
+  toBrandOption,
+  toCustomerOption,
+  toItemOption,
+} from "@/lib/invoice-draft";
 import { getOwnedInvoice } from "@/lib/invoices";
 import { InvoiceEditor } from "../../invoice-editor";
 
@@ -10,10 +15,14 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   const { id } = await params;
   const user = await requireUser(`/invoices/${id}/edit`);
 
-  const [invoice, brands, customers] = await Promise.all([
+  const [invoice, brands, customers, items] = await Promise.all([
     getOwnedInvoice(id, user.id),
     listBrands(user.id),
     prisma.customer.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.item.findMany({
+      where: { userId: user.id },
+      orderBy: [{ code: "asc" }, { name: "asc" }],
+    }),
   ]);
   if (!invoice) notFound();
 
@@ -21,6 +30,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     <InvoiceEditor
       brands={brands.map(toBrandOption)}
       customers={customers.map(toCustomerOption)}
+      catalog={items.map(toItemOption)}
       initialDraft={draftFromInvoice(invoice)}
       invoiceId={invoice.id}
     />

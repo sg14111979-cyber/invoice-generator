@@ -101,6 +101,7 @@ function invoiceScalarData(input: InvoiceInput, logoPath: string | null) {
 function itemRows(input: InvoiceInput, totals: ReturnType<typeof totalsFor>) {
   return input.items.map((item, index) => ({
     position: index,
+    code: item.code,
     description: item.description,
     quantity: item.quantity,
     unit: item.unit,
@@ -176,6 +177,7 @@ export function invoiceToView(invoice: InvoiceWithItems): InvoiceView {
     toTaxNumber: invoice.toTaxNumber,
 
     items: invoice.items.map((item) => ({
+      code: item.code,
       description: item.description,
       quantity: item.quantity,
       unit: item.unit,

@@ -2,16 +2,25 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getActiveBrand, listBrands } from "@/lib/brand";
 import { prisma } from "@/lib/db";
-import { newInvoiceDraft, toBrandOption, toCustomerOption } from "@/lib/invoice-draft";
+import {
+  newInvoiceDraft,
+  toBrandOption,
+  toCustomerOption,
+  toItemOption,
+} from "@/lib/invoice-draft";
 import { previewNextInvoiceNumber } from "@/lib/numbering";
 import { InvoiceEditor } from "../invoice-editor";
 
 export default async function NewInvoicePage() {
   const user = await requireUser("/invoices/new");
-  const [brands, activeBrand, customers] = await Promise.all([
+  const [brands, activeBrand, customers, items] = await Promise.all([
     listBrands(user.id),
     getActiveBrand(user.id),
     prisma.customer.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.item.findMany({
+      where: { userId: user.id },
+      orderBy: [{ code: "asc" }, { name: "asc" }],
+    }),
   ]);
 
   if (!activeBrand) {
@@ -36,6 +45,7 @@ export default async function NewInvoicePage() {
     <InvoiceEditor
       brands={brands.map(toBrandOption)}
       customers={customers.map(toCustomerOption)}
+      catalog={items.map(toItemOption)}
       initialDraft={newInvoiceDraft(brandOption, invoiceNumber)}
       invoiceId={null}
     />

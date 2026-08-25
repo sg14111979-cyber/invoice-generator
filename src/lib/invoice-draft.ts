@@ -2,7 +2,7 @@ import { joinAddress, toDateInputValue } from "@/lib/format";
 import { buildInvoiceView, type InvoiceView } from "@/lib/invoice-view";
 import type { InvoiceWithItems } from "@/lib/invoices";
 import type { InvoiceInput } from "@/lib/schemas";
-import type { Brand, BrandSettings, Customer } from "@prisma/client";
+import type { Brand, BrandSettings, Customer, Item } from "@prisma/client";
 
 export type DraftItem = InvoiceInput["items"][number] & { key: string };
 export type InvoiceDraft = Omit<InvoiceInput, "items"> & { items: DraftItem[] };
@@ -21,6 +21,17 @@ export interface BrandOption {
   fromRegistration: string;
 }
 
+export interface ItemOption {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  unit: string;
+  rate: number;
+  taxRate: number;
+  hsnCode: string;
+}
+
 export interface CustomerOption {
   id: string;
   name: string;
@@ -36,6 +47,7 @@ export function newItem(): DraftItem {
   itemCounter += 1;
   return {
     key: `item-${Date.now()}-${itemCounter}`,
+    code: "",
     description: "",
     quantity: 1,
     unit: "",
@@ -65,6 +77,31 @@ export function toBrandOption(brand: Brand & { settings: BrandSettings | null })
     fromWebsite: brand.website,
     fromTaxNumber: brand.taxNumber,
     fromRegistration: brand.registrationNumber,
+  };
+}
+
+export function toItemOption(item: Item): ItemOption {
+  return {
+    id: item.id,
+    code: item.code ?? "",
+    name: item.name,
+    description: item.description,
+    unit: item.unit,
+    rate: item.rate,
+    taxRate: item.taxRate,
+    hsnCode: item.hsnCode,
+  };
+}
+
+/** Fills a line from a catalogue entry; the code is snapshotted onto the invoice. */
+export function itemToDraftItem(option: ItemOption, current: DraftItem): DraftItem {
+  return {
+    ...current,
+    code: option.code,
+    description: option.description || option.name,
+    unit: option.unit,
+    rate: option.rate,
+    taxRate: option.taxRate,
   };
 }
 
@@ -219,6 +256,7 @@ export function draftFromInvoice(invoice: InvoiceWithItems): InvoiceDraft {
         ? invoice.items.map((item) => ({
             key: item.id,
             id: item.id,
+            code: item.code,
             description: item.description,
             quantity: item.quantity,
             unit: item.unit,
@@ -259,6 +297,7 @@ export function draftToView(draft: InvoiceDraft, logoPath: string | null): Invoi
     toTaxNumber: draft.toTaxNumber,
 
     items: draft.items.map((item) => ({
+      code: item.code,
       description: item.description,
       quantity: item.quantity,
       unit: item.unit,

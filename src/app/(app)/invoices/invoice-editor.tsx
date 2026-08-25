@@ -12,18 +12,26 @@ import {
   daysFromTerms,
   draftToPayload,
   draftToView,
+  itemToDraftItem,
   newItem,
   type BrandOption,
   type CustomerOption,
   type InvoiceDraft,
+  type ItemOption,
 } from "@/lib/invoice-draft";
 import { INVOICE_STATUSES } from "@/lib/schemas";
 
 interface Props {
   brands: BrandOption[];
   customers: CustomerOption[];
+  catalog: ItemOption[];
   initialDraft: InvoiceDraft;
   invoiceId: string | null;
+}
+
+/** Label used both in the datalist and to match what the user picked back to an item. */
+function catalogLabel(option: ItemOption): string {
+  return option.code ? `${option.code} \u2014 ${option.name}` : option.name;
 }
 
 const CURRENCY_OPTIONS = CURRENCY_CODES.map((code) => ({
@@ -42,9 +50,17 @@ const STATUS_OPTIONS = INVOICE_STATUSES.map((status) => ({
 
 const SAVE_DEBOUNCE_MS = 1500;
 
-export function InvoiceEditor({ brands, customers, initialDraft, invoiceId }: Props) {
+export function InvoiceEditor({
+  brands,
+  customers,
+  catalog: initialCatalog,
+  initialDraft,
+  invoiceId,
+}: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState<InvoiceDraft>(initialDraft);
+  const [catalog, setCatalog] = useState<ItemOption[]>(initialCatalog);
+  const [itemNotice, setItemNotice] = useState("");
   const [savedId, setSavedId] = useState<string | null>(invoiceId);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -207,6 +223,55 @@ export function InvoiceEditor({ brands, customers, initialDraft, invoiceId }: Pr
     }));
   }
 
+  /** Accepts a code, a name or the "CODE \u2014 Name" label the datalist offers. */
+  function applyCatalogItem(index: number, typed: string) {
+    const needle = typed.trim().toLowerCase();
+    if (!needle) return;
+    const option = catalog.find(
+      (candidate) =>
+        catalogLabel(candidate).toLowerCase() === needle ||
+        candidate.code.toLowerCase() === needle ||
+        candidate.name.toLowerCase() === needle,
+    );
+    if (!option) return;
+
+    dirtyRef.current = true;
+    setItemNotice("");
+    setDraft((current) => ({
+      ...current,
+      items: current.items.map((line, i) => (i === index ? itemToDraftItem(option, line) : line)),
+    }));
+  }
+
+  async function saveItemToCatalog(index: number) {
+    const line = draft.items[index];
+    const name = line.description.trim();
+    if (!name) {
+      setItemNotice("Type a description first, then save it as an item.");
+      return;
+    }
+    setItemNotice("");
+    try {
+      const saved = await api<ItemOption & { code: string | null }>("/api/items", {
+        method: "POST",
+        body: {
+          code: line.code,
+          name,
+          description: line.description,
+          unit: line.unit,
+          rate: line.rate,
+          taxRate: line.taxRate,
+        },
+      });
+      setCatalog((current) => [...current, { ...saved, code: saved.code ?? "" }]);
+      setItemNotice(`Saved "${name}" to your items.`);
+    } catch (caught) {
+      setItemNotice(
+        caught instanceof ApiError ? caught.message : "Could not save this line as an item.",
+      );
+    }
+  }
+
   function addItem() {
     dirtyRef.current = true;
     setDraft((current) => ({ ...current, items: [...current.items, newItem()] }));
@@ -354,11 +419,41 @@ export function InvoiceEditor({ brands, customers, initialDraft, invoiceId }: Pr
       </section>
 
       <section className="card p-4">
-        <h2 className="text-sm font-semibold text-slate-900">Line items</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-900">Line items</h2>
+          <Link href="/items" className="text-xs font-semibold text-navy-700 hover:underline">
+            Manage items
+          </Link>
+        </div>
+        {itemNotice ? (
+          <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            {itemNotice}
+          </p>
+        ) : null}
+        <datalist id="catalog-items">
+          {catalog.map((option) => (
+            <option key={option.id} value={catalogLabel(option)} />
+          ))}
+        </datalist>
         <div className="mt-3 space-y-3">
           {draft.items.map((item, index) => (
             <div key={item.key} className="rounded-md border border-slate-200 p-3">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+                <label className="col-span-2 block sm:col-span-4">
+                  <span className="label">Pick a saved item</span>
+                  <input
+                    className="input"
+                    list="catalog-items"
+                    placeholder="Type a code or name, e.g. A4-COPY-80"
+                    onChange={(event) => applyCatalogItem(index, event.target.value)}
+                  />
+                </label>
+                <TextField
+                  label="Item code"
+                  value={item.code}
+                  onChange={(value) => setItem(index, "code", value)}
+                  className="col-span-2"
+                />
                 <TextAreaField
                   label="Description"
                   value={item.description}
@@ -405,7 +500,14 @@ export function InvoiceEditor({ brands, customers, initialDraft, invoiceId }: Pr
                   {formatMoney(view.totals.lines[index]?.net ?? 0, draft.currency)}
                 </div>
               </div>
-              <div className="mt-2 flex justify-end gap-2">
+              <div className="mt-2 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => void saveItemToCatalog(index)}
+                >
+                  Save as item
+                </button>
                 <button type="button" className="btn-secondary" onClick={() => duplicateItem(index)}>
                   Duplicate
                 </button>

@@ -15,26 +15,39 @@ const STEPS = [
     action: { href: "/customers", label: "Go to Customers" },
   },
   {
-    title: "3. Create an invoice",
+    title: "3. Save the things you sell",
+    body: "Open Items and add each product or service once: your own code (for example A4-COPY-80), the name, unit, rate, tax rate and HSN/SAC. On an invoice you then type that code or name in \u201cPick a saved item\u201d and the whole line fills itself in, so the same item is billed identically to every customer. Already typed a line by hand? Press \u201cSave as item\u201d on it and it joins the list.",
+    action: { href: "/items", label: "Go to Items" },
+  },
+  {
+    title: "4. Create an invoice",
     body: "Click New invoice. The invoice number, date and your business details are filled in for you. Pick a customer, then add a line for each product or service: description, quantity, rate. The preview on the right is exactly what your customer will receive.",
     action: { href: "/invoices/new", label: "Create an invoice" },
   },
   {
-    title: "4. Add tax, discount and shipping",
+    title: "5. Add tax, discount and shipping",
     body: "Choose No tax, one tax rate for the whole invoice, a different rate per line, or GST (CGST/SGST for the same state, IGST for another state). Discounts can be a percentage or a fixed amount. Add shipping if you charge it. The total updates as you type — there is nothing to calculate yourself.",
   },
   {
-    title: "5. Save, then send",
+    title: "6. Save, then send",
     body: "Your work is saved automatically as a draft while you type, and Save invoice stores it for good. Then use PDF to download a file you can email or WhatsApp, or Print for a paper copy. Change the status to Sent, and to Paid once the money arrives.",
   },
   {
-    title: "6. Keep track",
+    title: "7. Keep track",
     body: "Invoices lists everything you have made, with a search box and filters by customer, status and date. The Dashboard shows how much you have invoiced, how much has been paid and how much is still outstanding. Unpaid invoices past their due date are marked Overdue automatically.",
     action: { href: "/invoices", label: "See all invoices" },
   },
 ];
 
 const FAQS = [
+  {
+    q: "Can two items share a code?",
+    a: "No \u2014 a code is your unique reference, so the app refuses a code that is already in use and tells you which item has it. Leave the code blank if you would rather search by name only.",
+  },
+  {
+    q: "If I change an item's rate, do old invoices change?",
+    a: "No. Each invoice keeps its own copy of the code, description and rate as they were when you made it, so history never changes underneath you.",
+  },
   {
     q: "Do I need to be online?",
     a: "No. The app runs on your own computer and your data stays in a file on that computer. Keep a copy of the dev.db file if you want a backup.",

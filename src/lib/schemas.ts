@@ -120,8 +120,20 @@ export const customerSchema = z.object({
   taxNumber: optionalText(60),
 });
 
+export const itemSchema = z.object({
+  code: optionalText(40),
+  name: z.string().trim().min(1, "Item name is required").max(200),
+  description: optionalText(500),
+  unit: optionalText(40),
+  rate: z.coerce.number().min(0).max(1_000_000_000).default(0),
+  taxRate: z.coerce.number().min(0).max(100).default(0),
+  hsnCode: optionalText(40),
+  notes: optionalText(1000),
+});
+
 export const invoiceItemSchema = z.object({
   id: z.string().optional(),
+  code: optionalText(40),
   description: optionalText(500),
   quantity: z.coerce.number().min(0).max(1_000_000).default(1),
   unit: optionalText(40),
@@ -200,4 +212,5 @@ export type InvoiceInput = z.infer<typeof invoiceSchema>;
 export type BrandInput = z.infer<typeof brandSchema>;
 export type BrandSettingsInput = z.infer<typeof brandSettingsSchema>;
 export type CustomerInput = z.infer<typeof customerSchema>;
+export type ItemInput = z.infer<typeof itemSchema>;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
